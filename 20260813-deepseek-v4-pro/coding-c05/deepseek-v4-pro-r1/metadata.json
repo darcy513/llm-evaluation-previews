@@ -4,6 +4,7 @@
   "model_alias": "deepseek-v4-pro-r1",
   "artifact_type": "html",
   "entry": "index.html",
-  "index_sha256": "ff5589f088ff70a762ca168ff9f3adbac44ed9ff67a1d27573cca41dd28c53c5",
-  "extraction_policy": "mechanical-only-no-code-repair"
+  "index_sha256": "94b2afe18390e3b1b8f975d7f8159e64c227623143b56b1d23f851015cf94d68",
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "source": "harness-minimal-20260825"
 }

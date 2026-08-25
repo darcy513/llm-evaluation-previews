@@ -1,0 +1,10 @@
+{
+  "name": "archery-shooting-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "弓箭射击模拟游戏：命中 4 个靶子，用时越短排行榜名次越高",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node --test tests/game.test.js"
+  }
+}
