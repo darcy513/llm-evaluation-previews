@@ -5,6 +5,7 @@
   "extraction_policy": "mechanical-only-no-code-repair",
   "counts": {
     "published": 8,
+    "reasoning_answers": 8,
     "not_extracted": 0,
     "not_successful": 0
   }
