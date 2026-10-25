@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>AURORA / 极光 — 世代飞船交互模型</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --cyan: #79e7ff;
+      --blue: #6788ff;
+      --text: #e7f2ff;
+      --muted: #8b9db3;
+      --panel: rgba(6, 12, 24, .76);
+      --line: rgba(137, 207, 255, .18);
+    }
+    * { box-sizing: border-box; }
+    html, body, #app {
+      width: 100%; height: 100%; margin: 0; overflow: hidden;
+      background: #010208;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    button { font: inherit; }
+    #vignette {
+      position: fixed; inset: 0; pointer-events: none; z-index: 2;
+      background:
+        radial-gradient(circle at center, transparent 48%, rgba(0,0,0,.45) 120%),
+        linear-gradient(180deg, rgba(0,0,0,.18), transparent 22%, transparent 78%, rgba(0,0,0,.3));
+    }
+    #brand {
+      position: fixed; z-index: 5; left: 26px; top: 22px;
+      pointer-events: none; text-shadow: 0 2px 18px #000;
+    }
+    #brand .eyebrow {
+      font-size: 10px; letter-spacing: .28em; color: var(--cyan);
+      opacity: .82; margin-bottom: 7px;
+    }
+    #brand h1 {
+      font-size: 25px; line-height: 1; font-weight: 500;
+      letter-spacing: .17em; margin: 0 0 9px;
+    }
+    #brand h1 span { color: #91a2b8; font-size: 15px; letter-spacing: .08em; }
+    #brand p { margin: 0; color: var(--muted); font-size: 11px; letter-spacing: .12em; }
+    .chips { display: flex; gap: 6px; margin-top: 13px; flex-wrap: wrap; }
+    .chip {
+      border: 1px solid var(--line); background: rgba(4,10,20,.45);
+      border-radius: 99px; padding: 5px 9px; color: #a9bdd2;
+      font-size: 10px; letter-spacing: .04em; backdrop-filter: blur(8px);
+    }
+    #topbar {
+      position: fixed; right: 22px; top: 22px; z-index: 8;
+      display: flex; gap: 7px; padding: 5px;
+      border: 1px solid var(--line); border-radius: 12px;
+      background: var(--panel); backdrop-filter: blur(15px);
+      box-shadow: 0 12px 35px rgba(0,0,0,.28);
+    }
+    .ui-button {
+      appearance: none; border: 1px solid transparent; border-radius: 8px;
+      background: transparent; color: #9fb2c8; cursor: pointer;
+      padding: 8px 12px; font-size: 12px; transition: .18s ease;
+      white-space: nowrap;
+    }
+    .ui-button:hover { color: white; background: rgba(121,231,255,.08); }
+    .ui-button.active {
+      color: #dffaff; border-color: rgba(121,231,255,.28);
+      background: rgba(62,164,205,.17);
+      box-shadow: inset 0 0 18px rgba(80,190,255,.06);
+    }
+    #locations {
+      display: none; position: fixed; z-index: 7; left: 24px; top: 174px;
+      width: 224px; padding: 15px;
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 13px; backdrop-filter: blur(15px);
+    }
+    body.inside #locations { display: block; }
+    #locations h2 {
+      font-size: 11px; letter-spacing: .16em; font-weight: 500;
+      color: #a8bed3; margin: 0 0 11px;
+    }
+    .room {
+      width: 100%; text-align: left; border: 0; border-left: 2px solid transparent;
+      color: #9fb1c5; background: transparent; padding: 10px 9px;
+      cursor: pointer; font-size: 12px; border-radius: 0 7px 7px 0;
+    }
+    .room span { display: inline-block; width: 26px; color: #52677e; font-size: 10px; }
+    .room:hover { background: rgba(121,231,255,.06); color: white; }
+    .room.active {
+      color: var(--cyan); border-left-color: var(--cyan);
+      background: linear-gradient(90deg, rgba(121,231,255,.11), transparent);
+    }
+    #locations .small {
+      margin: 11px 5px 0; padding-top: 10px;
+      border-top: 1px solid var(--line); color: #6f8399;
+      font-size: 10px; line-height: 1.7;
+    }
+    #help {
+      position: fixed; z-index: 5; right: 24px; bottom: 23px;
+      max-width: 370px; text-align: right; pointer-events: none;
+      color: #7f93a9; font-size: 11px; line-height: 1.8;
+      text-shadow: 0 2px 8px #000;
+    }
+    #help b { color: #c5d8e9; font-weight: 500; }
+    #status {
+      position: fixed; z-index: 5; left: 26px; bottom: 24px;
+      pointer-events: none; font-size: 10px; letter-spacing: .12em;
+      color: #8098af; display: flex; align-items: center; gap: 8px;
+    }
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #6fffc1;
+      box-shadow: 0 0 10px #6fffc1; animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 50% { opacity: .35; } }
+    #reticle {
+      display: none; position: fixed; z-index: 4; left: 50%; top: 50%;
+      width: 14px; height: 14px; transform: translate(-50%,-50%);
+      pointer-events: none; opacity: .65;
+    }
+    #reticle::before, #reticle::after {
+      content: ""; position: absolute; background: #d9f6ff;
+    }
+    #reticle::before { width: 14px; height: 1px; top: 6px; }
+    #reticle::after { height: 14px; width: 1px; left: 6px; }
+    body.inside #reticle { display: block; }
+    body.inside #cruiseBtn { display: none; }
+    #partTip {
+      display: none; position: fixed; z-index: 12; pointer-events: none;
+      padding: 7px 10px; border: 1px solid rgba(121,231,255,.25);
+      border-radius: 6px; background: rgba(2,8,17,.88);
+      color: #cceeff; font-size: 11px; letter-spacing: .04em;
+      box-shadow: 0 8px 25px rgba(0,0,0,.4);
+    }
+    #toast {
+      position: fixed; z-index: 20; left: 50%; bottom: 75px;
+      transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+      padding: 9px 15px; border: 1px solid var(--line); border-radius: 8px;
+      background: rgba(5,12,24,.9); color: #cdefff; font-size: 12px;
+      transition: .25s ease;
+    }
+    #toast.show { opacity: 1; transform: translate(-50%,0); }
+    #about {
+      position: fixed; z-index: 30; right: 22px; top: 82px; width: min(430px, calc(100vw - 44px));
+      padding: 22px; border: 1px solid var(--line); border-radius: 14px;
+      background: rgba(4,10,21,.94); backdrop-filter: blur(20px);
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      color: #a9bacb; font-size: 12px; line-height: 1.85;
+    }
+    #about h2 { color: #e5f6ff; font-size: 16px; font-weight: 500; margin: 0 0 13px; }
+    #about strong { color: #d6f4ff; font-weight: 500; }
+    #about .close { position: absolute; right: 10px; top: 8px; }
+    .hidden { display: none !important; }
+    #loading {
+      position: fixed; z-index: 100; inset: 0; display: grid; place-items: center;
+      background: #01030a; transition: opacity .6s ease;
+    }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #loading .loadbox { text-align: center; color: #91a9bf; font-size: 12px; letter-spacing: .12em; }
+    #loading .ring {
+      width: 44px; height: 44px; margin: 0 auto 18px; border-radius: 50%;
+      border: 1px solid rgba(121,231,255,.16); border-top-color: var(--cyan);
+      animation: spin 1s linear infinite;
+    }
+    #loading small { display: block; margin-top: 10px; color: #4f6378; letter-spacing: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 820px) {
+      #brand { left: 16px; top: 16px; }
+      #brand .chips, #brand p { display: none; }
+      #brand h1 { font-size: 19px; }
+      #topbar { right: 12px; top: auto; bottom: 14px; max-width: calc(100vw - 24px); }
+      .ui-button { padding: 8px; font-size: 11px; }
+      #help { display: none; }
+      #status { bottom: 72px; left: 16px; }
+      #locations { left: 12px; top: 100px; width: 184px; padding: 9px; }
+      #locations .small { display: none; }
+      .room { padding: 8px 5px; }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="vignette"></div>
+
+  <header id="brand">
+    <div class="eyebrow">INTERACTIVE CONCEPT MODEL</div>
+    <h1>AURORA <span>／ 极光</span></h1>
+    <p>GENERATION SHIP · DEEP SPACE TRANSIT</p>
+    <div class="chips">
+      <span class="chip">双环结构</span>
+      <span class="chip">24 生态舱段</span>
+      <span class="chip">旋转人工重力</span>
+    </div>
+  </header>
+
+  <nav id="topbar">
+    <button class="ui-button active" id="exteriorBtn">外部航行</button>
+    <button class="ui-button" id="interiorBtn">进入内部</button>
+    <button class="ui-button" id="cruiseBtn">自动环绕</button>
+    <button class="ui-button" id="aboutBtn">设定说明</button>
+  </nav>
+
+  <aside id="locations">
+    <h2>内部甲板 / DECK 01</h2>
+    <button class="room" data-room="bridge"><span>01</span>舰桥与导航中心</button>
+    <button class="room" data-room="corridor"><span>02</span>中央连接通道</button>
+    <button class="room" data-room="hydro"><span>03</span>水培生态舱</button>
+    <button class="room" data-room="habitat"><span>04</span>居住与公共甲板</button>
+    <button class="room" data-room="reactor"><span>05</span>反应堆与推进控制</button>
+    <div class="small">WASD / 方向键移动<br>Shift 加速 · 拖动鼠标观察<br>Esc 返回飞船外部</div>
+  </aside>
+
+  <div id="help"></div>
+  <div id="status"><span class="dot"></span><span id="statusText"></span></div>
+  <div id="reticle"></div>
+  <div id="partTip"></div>
+  <div id="toast"></div>
+
+  <section id="about" class="hidden">
+    <button class="ui-button close" id="closeAbout">关闭</button>
+    <h2>设定与还原范围</h2>
+    <p><strong>参考框架：</strong>世代星际飞船、中央承力脊柱、双环共 24 个生态舱段，以及通过旋转获得的惯性重力。</p>
+    <p><strong>可视化补全：</strong>舰首航电设备、散热器、燃料储存、推进器布局、内部甲板和舱室装潢属于一致性设计，并非原著官方工程图。环体采用便于观察的低速反向旋转，转速和模型尺寸不代表原著数据。</p>
+    <p><strong>操作：</strong>外部左键环绕、滚轮缩放、右键平移、双击复位；内部拖动视角并使用 WASD 漫游，也可通过左侧目录直接前往各舱室。</p>
+  </section>
+
+  <div id="loading">
+    <div class="loadbox">
+      <div class="ring"></div>
+      正在组装世代飞船
+      <small>首次打开需要联网加载 Three.js</small>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const $ = id => document.getElementById(id);
+    const app = $('app');
+    const V3 = THREE.Vector3;
+
+    // ---------- 渲染器、场景与相机 ----------
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    app.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x010208);
+
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, .05, 1200);
+    camera.position.set(24, 14, 31);
+    camera.rotation.order = 'YXZ';
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = .065;
+    controls.rotateSpeed = .55;
+    controls.zoomSpeed = .8;
+    controls.panSpeed = .65;
+    controls.minDistance = 9;
+    controls.maxDistance = 90;
+    controls.target.set(0, 0, 0);
+    controls.autoRotateSpeed = .55;
+    controls.update();
+
+    const ambient = new THREE.AmbientLight(0x8da7c5, .5);
+    const keyLight = new THREE.DirectionalLight(0xe3efff, 2.8);
+    keyLight.position.set(-14, 22, -18);
+    const rimLight = new THREE.DirectionalLight(0x537dff, 2.0);
+    rimLight.position.set(15, -8, 18);
+    scene.add(ambient, keyLight, rimLight);
+
+    const space = new THREE.Group();
+    const ship = new THREE.Group();
+    const interior = new THREE.Group();
+    interior.visible = false;
+    scene.add(space, ship, interior);
+
+    // 固定随机序列，使每次生成的星场和植被一致。
+    let seed = 1701;
+    function rand() {
+      seed |= 0;
+      seed = seed + 0x6D2B79F5 | 0;
+      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+
+    function glowTexture() {
+      const c = document.createElement('canvas');
+      c.width = c.height = 128;
+      const x = c.getContext('2d');
+      const g = x.createRadialGradient(64,64,0,64,64,64);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(.15, 'rgba(255,255,255,.9)');
+      g.addColorStop(.42, 'rgba(255,255,255,.22)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g;
+      x.fillRect(0,0,128,128);
+      return new THREE.CanvasTexture(c);
+    }
+    const glowMap = glowTexture();
+
+    // ---------- 深空 ----------
+    function buildStars(count, minR, maxR, size) {
+      const p = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const color = new THREE.Color();
+      for (let i=0; i<count; i++) {
+        const u = rand() * 2 - 1;
+        const a = rand() * Math.PI * 2;
+        const s = Math.sqrt(1-u*u);
+        const r = minR + rand() * (maxR-minR);
+        p[i*3]   = r*s*Math.cos(a);
+        p[i*3+1] = r*u;
+        p[i*3+2] = r*s*Math.sin(a);
+        const pick = rand();
+        color.set(pick > .93 ? 0xffd4b5 : pick < .12 ? 0x9fc8ff : 0xdde8ff);
+        const brightness = .45 + rand()*.55;
+        colors[i*3] = color.r*brightness;
+        colors[i*3+1] = color.g*brightness;
+        colors[i*3+2] = color.b*brightness;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(p,3));
+      g.setAttribute('color', new THREE.BufferAttribute(colors,3));
+      return new THREE.Points(g, new THREE.PointsMaterial({
+        size, vertexColors: true, transparent: true, opacity: .92,
+        depthWrite: false, sizeAttenuation: true
+      }));
+    }
+    space.add(buildStars(5200,170,520,1.15));
+    space.add(buildStars(500,130,350,2.0));
+
+    for (const n of [
+      { p:[-190,85,-300], s:260, c:0x343787 },
+      { p:[220,-90,-260], s:220, c:0x143f67 },
+      { p:[40,160,-380], s:180, c:0x59265f }
+    ]) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowMap, color:n.c, transparent:true, opacity:.12,
+        blending:THREE.AdditiveBlending, depthWrite:false
+      }));
+      sp.position.set(...n.p);
+      sp.scale.set(n.s,n.s,1);
+      space.add(sp);
+    }
+
+    const dustCount = 420;
+    const dustPos = new Float32Array(dustCount*3);
+    for (let i=0; i<dustCount; i++) {
+      dustPos[i*3] = (rand()-.5)*100;
+      dustPos[i*3+1] = (rand()-.5)*70;
+      dustPos[i*3+2] = -100 + rand()*160;
+    }
+    const dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute('position',new THREE.BufferAttribute(dustPos,3));
+    const dust = new THREE.Points(dustGeo,new THREE.PointsMaterial({
+      color:0x9acfff,size:.065,transparent:true,opacity:.5,depthWrite:false
+    }));
+    space.add(dust);
+
+    // ---------- 通用建模工具 ----------
+    function addMesh(parent, geometry, material, pos=[0,0,0], rot=[0,0,0]) {
+      const m = new THREE.Mesh(geometry,material);
+      m.position.set(...pos);
+      m.rotation.set(...rot);
+      parent.add(m);
+      return m;
+    }
+    function beam(parent,a,b,r,material) {
+      const d = b.clone().sub(a);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),8),material);
+      m.position.copy(a).add(b).multiplyScalar(.5);
+      m.quaternion.setFromUnitVectors(new V3(0,1,0),d.normalize());
+      parent.add(m);
+      return m;
+    }
+    function zcyl(parent,rt,rb,len,material,pos,open=false) {
+      return addMesh(parent,
+        new THREE.CylinderGeometry(rt,rb,len,24,1,open),
+        material,pos,[Math.PI/2,0,0]);
+    }
+    function labelPart(object,text) {
+      object.traverse(o => { if (o.isMesh) o.userData.part=text; });
+    }
+
+    // ---------- 飞船外部 ----------
+    const hull = new THREE.MeshStandardMaterial({
+      color:0x8d9aa5,metalness:.82,roughness:.34
+    });
+    const paleHull = new THREE.MeshStandardMaterial({
+      color:0xb8c1c5,metalness:.68,roughness:.4
+    });
+    const structure = new THREE.MeshStandardMaterial({
+      color:0x394958,metalness:.88,roughness:.32
+    });
+    const darkMetal = new THREE.MeshStandardMaterial({
+      color:0x17232e,metalness:.86,roughness:.38
+    });
+    const windowMat = new THREE.MeshStandardMaterial({
+      color:0x163f50,emissive:0x52d9ff,emissiveIntensity:2.2,
+      metalness:.3,roughness:.25
+    });
+    const radiatorMat = new THREE.MeshStandardMaterial({
+      color:0x251d26,emissive:0x6e2024,emissiveIntensity:.32,
+      metalness:.55,roughness:.52
+    });
+    const biomeMats = [0x879a96,0x8d9589,0x7f929e,0x9a9385].map(color =>
+      new THREE.MeshStandardMaterial({color,metalness:.62,roughness:.43})
+    );
+
+    const spine = new THREE.Group();
+    ship.add(spine);
+    zcyl(spine,.56,.56,25.5,hull,[0,0,0]);
+    for (const z of [-11,-8,-4,0,4,8,11]) {
+      addMesh(spine,new THREE.TorusGeometry(.69,.075,8,32),structure,[0,0,z]);
+    }
+    for (const [x,y] of [[.82,.82],[-.82,.82],[.82,-.82],[-.82,-.82]]) {
+      beam(spine,new V3(x,y,-10.5),new V3(x,y,11.2),.055,structure);
+    }
+    zcyl(spine,.92,.92,2.2,darkMetal,[0,0,0]);
+    labelPart(spine,'中央承力脊柱 · 交通、储存与船体主结构');
+
+    function buildRing(z,name) {
+      const g = new THREE.Group();
+      g.position.z = z;
+      ship.add(g);
+      const R = 7.15;
+
+      const rail = addMesh(g,new THREE.TorusGeometry(R,.11,8,160),structure);
+      rail.userData.part = `${name} · 生态环主承力轨`;
+      for (const dz of [-.39,.39]) {
+        addMesh(g,new THREE.TorusGeometry(R,.065,6,160),structure,[0,0,dz]);
+      }
+      zcyl(g,1.02,1.02,1.25,darkMetal,[0,0,0]);
+
+      for (let i=0;i<6;i++) {
+        const a=i*Math.PI/3;
+        beam(g,
+          new V3(Math.cos(a)*.85,Math.sin(a)*.85,0),
+          new V3(Math.cos(a)*R,Math.sin(a)*R,0),
+          .065,structure);
+      }
+
+      for (let i=0;i<12;i++) {
+        const a=i*Math.PI*2/12;
+        const pod = new THREE.Group();
+        pod.position.set(Math.cos(a)*R,Math.sin(a)*R,0);
+        pod.quaternion.setFromUnitVectors(
+          new V3(0,1,0),new V3(-Math.sin(a),Math.cos(a),0)
+        );
+        g.add(pod);
+
+        addMesh(pod,new THREE.CapsuleGeometry(.56,2.05,4,12),biomeMats[i%4]);
+        for (const y of [-.77,.77]) {
+          addMesh(pod,new THREE.CylinderGeometry(.585,.585,.07,16),structure,[0,y,0]);
+        }
+        addMesh(pod,new THREE.BoxGeometry(.31,1.35,.035),windowMat,[0,0,.56]);
+        addMesh(pod,new THREE.BoxGeometry(.31,1.35,.035),windowMat,[0,0,-.56]);
+        addMesh(pod,new THREE.BoxGeometry(.68,.1,.68),darkMetal,[0,1.43,0]);
+        labelPart(pod,`${name} · 生态舱段 ${String(i+1).padStart(2,'0')} / 独立生物群系`);
+      }
+      return g;
+    }
+    const ringA = buildRing(-3.25,'A 环');
+    const ringB = buildRing(3.75,'B 环');
+
+    const bow = new THREE.Group();
+    ship.add(bow);
+    zcyl(bow,.93,.64,3.0,paleHull,[0,0,-11.8]);
+    zcyl(bow,.96,.96,.24,windowMat,[0,0,-12.15]);
+    addMesh(bow,new THREE.ConeGeometry(.64,2.0,24),hull,[0,0,-14.15],[-Math.PI/2,0,0]);
+    zcyl(bow,1.12,1.12,.38,darkMetal,[0,0,-10.3]);
+    beam(bow,new V3(0,.8,-10.8),new V3(0,2.1,-11.3),.045,structure);
+    beam(bow,new V3(0,2.1,-11.3),new V3(0,2.1,-13.0),.025,structure);
+    addMesh(bow,new THREE.SphereGeometry(.62,20,10,0,Math.PI*2,0,Math.PI/2),
+      paleHull,[0,1.05,-10.6],[Math.PI,0,0]);
+    for (const x of [-.48,.48]) {
+      beam(bow,new V3(x,0,-13.7),new V3(x*1.8,0,-15.25),.018,structure);
+    }
+    labelPart(bow,'舰首 · 导航、通讯、传感与航电系统');
+
+    const fuel = new THREE.Group();
+    ship.add(fuel);
+    for (const [x,y] of [[1.05,0],[-1.05,0],[0,1.05],[0,-1.05]]) {
+      addMesh(fuel,new THREE.CapsuleGeometry(.42,2.25,4,12),
+        darkMetal,[x,y,7.65],[Math.PI/2,0,0]);
+    }
+    labelPart(fuel,'后部储备区 · 推进剂与长期航行物资');
+
+    const radiators = new THREE.Group();
+    ship.add(radiators);
+    for (const side of [-1,1]) {
+      addMesh(radiators,new THREE.BoxGeometry(5.3,.055,2.35),
+        radiatorMat,[side*4.15,0,8.85]);
+      beam(radiators,new V3(side*.55,0,8.85),new V3(side*1.6,0,8.85),.12,structure);
+      for (let i=0;i<7;i++) {
+        addMesh(radiators,new THREE.BoxGeometry(.025,.065,2.28),
+          structure,[side*(1.75+i*.78),.02,8.85]);
+      }
+    }
+    labelPart(radiators,'热控系统 · 深空辐射散热板');
+
+    const engineSprites = [];
+    const exhaustMat = new THREE.MeshBasicMaterial({
+      color:0x58bfff,transparent:true,opacity:.12,
+      blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide
+    });
+    const engineGlowMat = new THREE.SpriteMaterial({
+      map:glowMap,color:0x79dfff,transparent:true,opacity:.85,
+      blending:THREE.AdditiveBlending,depthWrite:false
+    });
+    const drive = new THREE.Group();
+    ship.add(drive);
+    zcyl(drive,1.35,1.35,1.55,darkMetal,[0,0,12.05]);
+    zcyl(drive,.82,1.25,1.0,hull,[0,0,11.1]);
+
+    const enginePositions = [[0,0],[1.05,0],[-1.05,0],[0,1.05],[0,-1.05]];
+    for (const [x,y] of enginePositions) {
+      zcyl(drive,.38,.68,1.45,hull,[x,y,13.05],true);
+      zcyl(drive,.4,.4,.12,windowMat,[x,y,13.76]);
+      const glow = new THREE.Sprite(engineGlowMat);
+      glow.position.set(x,y,13.95);
+      glow.scale.set(1.8,1.8,1);
+      drive.add(glow);
+      engineSprites.push(glow);
+      addMesh(drive,new THREE.ConeGeometry(.48,4.1,16,1,true),
+        exhaustMat,[x,y,15.7],[Math.PI/2,0,0]);
+    }
+    const engineLight = new THREE.PointLight(0x59bfff,35,18,2);
+    engineLight.position.set(0,0,14);
+    drive.add(engineLight);
+    labelPart(drive,'主推进集群 · 深空减速与航向修正');
+
+    const navMat = new THREE.MeshBasicMaterial({
+      color:0xff685d,transparent:true,opacity:1
+    });
+    for (const p of [[-6.8,0,8.85],[6.8,0,8.85],[0,2.1,-13]]) {
+      addMesh(ship,new THREE.SphereGeometry(.09,8,8),navMat,p);
+    }
+
+    // ---------- 飞船内部 ----------
+    const floorMat = new THREE.MeshStandardMaterial({
+      color:0x111923,metalness:.7,roughness:.5
+    });
+    const wallMat = new THREE.MeshStandardMaterial({
+      color:0x2a3641,metalness:.62,roughness:.46
+    });
+    const ceilingMat = new THREE.MeshStandardMaterial({
+      color:0x19232d,metalness:.55,roughness:.55
+    });
+    const trimMat = new THREE.MeshStandardMaterial({
+      color:0x597080,metalness:.8,roughness:.3
+    });
+    const lightMat = new THREE.MeshBasicMaterial({color:0xa9efff});
+    const warmLightMat = new THREE.MeshBasicMaterial({color:0xffc788});
+    const screenMat = new THREE.MeshBasicMaterial({color:0x55d9f5});
+    const holoMat = new THREE.MeshBasicMaterial({
+      color:0x64ddff,transparent:true,opacity:.48,
+      blending:THREE.AdditiveBlending,depthWrite:false
+    });
+
+    const ib = (w,h,d,mat,x,y,z) =>
+      addMesh(interior,new THREE.BoxGeometry(w,h,d),mat,[x,y,z]);
+
+    function deck(cx,cz,w,d) {
+      ib(w,.18,d,floorMat,cx,-.09,cz);
+      ib(w,.16,d,ceilingMat,cx,4.27,cz);
+    }
+    function wallX(z,cx,len) { ib(len,4.2,.16,wallMat,cx,2.1,z); }
+    function wallZ(x,cz,len) { ib(.16,4.2,len,wallMat,x,2.1,cz); }
+    function point(color,intensity,x,z,distance=18) {
+      const l = new THREE.PointLight(color,intensity,distance,2);
+      l.position.set(x,3.45,z);
+      interior.add(l);
+    }
+
+    interior.add(new THREE.HemisphereLight(0xb5c9de,0x10131b,1.35));
+
+    // 甲板：中央通道、舰桥、左右舱室、后部反应堆。
+    deck(0,1,4,32);
+    deck(0,-19,14,8);
+    deck(-8,0,12,10);
+    deck(8,0,12,10);
+    deck(0,21,14,8);
+
+    // 舰桥外壳与带门隔断。
+    wallZ(-7,-19,8); wallZ(7,-19,8);
+    wallX(-23,0,14);
+    wallX(-15,-4.3,5.6); wallX(-15,4.3,5.6);
+
+    // 左右生态/居住舱。
+    wallZ(-14,0,10); wallX(-5,-8,12); wallX(5,-8,12);
+    wallZ(14,0,10); wallX(-5,8,12); wallX(5,8,12);
+
+    // 反应堆。
+    wallZ(-7,21,8); wallZ(7,21,8); wallX(25,0,14);
+    wallX(17,-4.3,5.6); wallX(17,4.3,5.6);
+
+    // 中央通道侧墙，在左右舱室和前后门口留出开口。
+    for (const x of [-2,2]) {
+      for (const [a,b] of [[-15,-5],[-5,-1.4],[1.4,5],[5,17]]) {
+        wallZ(x,(a+b)/2,b-a);
+      }
+    }
+
+    // 门框和地板导向灯。
+    for (const z of [-15,17]) {
+      ib(3,.1,.16,lightMat,0,3.25,z);
+      ib(.12,3.2,.18,trimMat,-1.46,1.6,z);
+      ib(.12,3.2,.18,trimMat,1.46,1.6,z);
+    }
+    for (const x of [-2,2]) {
+      ib(.16,.1,3,lightMat,x,3.25,0);
+      ib(.18,3.2,.12,trimMat,x,1.6,-1.46);
+      ib(.18,3.2,.12,trimMat,x,1.6,1.46);
+    }
+    ib(.045,.025,30,lightMat,-1.62,.018,1);
+    ib(.045,.025,30,lightMat,1.62,.018,1);
+    for (let z=-13;z<=15;z+=4) {
+      ib(1.55,.04,.14,lightMat,0,4.15,z);
+      ib(3.75,.035,.05,trimMat,0,.025,z);
+    }
+
+    point(0xa6ddff,32,0,-8);
+    point(0xa6ddff,32,0,8);
+    point(0xa6ddff,45,0,-19);
+    point(0xb5ffd8,42,-8,0);
+    point(0xffd0a1,38,8,0);
+    point(0x77baff,48,0,21);
+
+    function textSprite(text,color='#bfefff') {
+      const c=document.createElement('canvas');
+      c.width=512; c.height=128;
+      const x=c.getContext('2d');
+      x.fillStyle='rgba(4,12,22,.82)';
+      x.fillRect(0,20,512,88);
+      x.strokeStyle='rgba(120,220,255,.35)';
+      x.strokeRect(2,22,508,84);
+      x.font='500 38px system-ui, Microsoft YaHei, sans-serif';
+      x.textAlign='center'; x.textBaseline='middle';
+      x.fillStyle=color; x.fillText(text,256,65);
+      const tex=new THREE.CanvasTexture(c);
+      tex.colorSpace=THREE.SRGBColorSpace;
+      const s=new THREE.Sprite(new THREE.SpriteMaterial({
+        map:tex,transparent:true,depthWrite:false
+      }));
+      s.scale.set(3.2,.8,1);
+      return s;
+    }
+    const signs = [
+      ['舰桥  /  NAVIGATION',0,3.55,-14.75],
+      ['生态舱  /  HYDROPONICS',-2.15,3.55,0],
+      ['居住甲板  /  HABITAT',2.15,3.55,0],
+      ['推进控制  /  REACTOR',0,3.55,17.15]
+    ];
+    for (const [t,x,y,z] of signs) {
+      const s=textSprite(t); s.position.set(x,y,z); interior.add(s);
+    }
+
+    // 舰桥：星空观察窗、驾驶台、座椅与全息星图。
+    function windowTexture() {
+      const c=document.createElement('canvas');
+      c.width=1024; c.height=384;
+      const x=c.getContext('2d');
+      const g=x.createLinearGradient(0,0,0,384);
+      g.addColorStop(0,'#020715'); g.addColorStop(1,'#07101d');
+      x.fillStyle=g; x.fillRect(0,0,1024,384);
+      for(let i=0;i<260;i++){
+        const a=Math.random()*.8+.15;
+        x.fillStyle=`rgba(210,230,255,${a})`;
+        const r=Math.random()<.06?1.6:.7;
+        x.fillRect(Math.random()*1024,Math.random()*384,r,r);
+      }
+      const tex=new THREE.CanvasTexture(c);
+      tex.colorSpace=THREE.SRGBColorSpace;
+      return tex;
+    }
+    addMesh(interior,new THREE.PlaneGeometry(9,2.55),
+      new THREE.MeshBasicMaterial({map:windowTexture()}),[0,2.35,-22.9]);
+    ib(9.5,.12,.16,trimMat,0,.99,-22.82);
+    ib(9.5,.12,.16,trimMat,0,3.7,-22.82);
+    ib(.12,2.8,.16,trimMat,-4.68,2.35,-22.82);
+    ib(.12,2.8,.16,trimMat,4.68,2.35,-22.82);
+
+    for (const x of [-4,-2,0,2,4]) {
+      ib(1.5,.7,.85,darkMetal,x,.35,-20.75);
+      ib(1.25,.5,.055,screenMat,x,1.02,-20.38);
+      ib(.65,.12,.65,trimMat,x,.55,-19.45);
+      ib(.65,.75,.12,darkMetal,x,.92,-19.15);
+    }
+    ib(2.2,.75,1.3,darkMetal,0,.38,-17.5);
+    const holo = new THREE.Group();
+    holo.position.set(0,1.25,-17.5);
+    interior.add(holo);
+    const holoRings=[];
+    for(let i=0;i<3;i++){
+      const r=addMesh(holo,new THREE.TorusGeometry(.55+i*.18,.018,6,64),
+        holoMat,[0,i*.17,0],[Math.PI/2+i*.28,i*.4,0]);
+      holoRings.push(r);
+    }
+    addMesh(holo,new THREE.SphereGeometry(.12,12,12),holoMat);
+
+    // 水培生态舱：种植床、植株、生长灯和循环水柱。
+    const soilMat=new THREE.MeshStandardMaterial({color:0x263028,roughness:.9});
+    const plantMat=new THREE.MeshStandardMaterial({
+      color:0x4d9b69,emissive:0x102d18,emissiveIntensity:.45,roughness:.8
+    });
+    const growMat=new THREE.MeshBasicMaterial({color:0xd594ff});
+    const beds=[];
+    for(const x of [-11,-8,-5]){
+      for(const z of [-2.8,0,2.8]){
+        ib(1.8,.45,2.0,soilMat,x,.23,z);
+        ib(1.9,.08,2.1,trimMat,x,.48,z);
+        beds.push([x,z]);
+      }
+      ib(.14,.08,8.3,growMat,x,3.65,0);
+    }
+    const plants=new THREE.InstancedMesh(
+      new THREE.IcosahedronGeometry(.23,0),plantMat,beds.length*8
+    );
+    let plantIndex=0;
+    for(const [x,z] of beds){
+      for(let j=0;j<8;j++){
+        const px=x+(rand()-.5)*1.25;
+        const pz=z+(rand()-.5)*1.45;
+        plants.setMatrixAt(plantIndex++,
+          new THREE.Matrix4().makeTranslation(px,.72+rand()*.25,pz));
+      }
+    }
+    plants.instanceMatrix.needsUpdate=true;
+    interior.add(plants);
+    const waterMat=new THREE.MeshStandardMaterial({
+      color:0x4b9bad,emissive:0x174b60,emissiveIntensity:.8,
+      transparent:true,opacity:.52,metalness:.15,roughness:.15
+    });
+    for(const z of [-3.7,3.7]){
+      addMesh(interior,new THREE.CylinderGeometry(.32,.32,2.8,16),
+        waterMat,[-12.9,1.5,z]);
+    }
+
+    // 居住甲板：睡眠舱、公共桌椅、储物柜和暖色照明。
+    const fabricMat=new THREE.MeshStandardMaterial({color:0x4b5264,roughness:.85});
+    for(const z of [-3.6,-1.2,1.2,3.6]){
+      ib(3.3,1.05,1.25,darkMetal,11.7,.55,z);
+      ib(2.8,.25,.95,fabricMat,11.55,1.0,z);
+      ib(2.7,.055,.06,warmLightMat,11.55,1.45,z-.59);
+    }
+    for(const z of [-2.1,2.1]){
+      addMesh(interior,new THREE.CylinderGeometry(1.05,1.05,.12,24),
+        trimMat,[7,.85,z]);
+      addMesh(interior,new THREE.CylinderGeometry(.12,.18,.8,12),
+        darkMetal,[7,.4,z]);
+      for(const x of [5.65,8.35]){
+        ib(.65,.55,.65,fabricMat,x,.3,z);
+      }
+    }
+    for(const z of [-3.8,-2.6,2.6,3.8]){
+      ib(.65,2.2,1.0,wallMat,3.1,1.1,z);
+      ib(.03,.08,.6,screenMat,3.44,1.65,z);
+    }
+    ib(7,.06,.14,warmLightMat,8,4.14,0);
+
+    // 反应堆与推进控制。
+    const reactorMat=new THREE.MeshStandardMaterial({
+      color:0x4c9fb7,emissive:0x28bde8,emissiveIntensity:2.8,
+      transparent:true,opacity:.58,metalness:.35,roughness:.15
+    });
+    const reactorCore=new THREE.Group();
+    reactorCore.position.set(0,0,21);
+    interior.add(reactorCore);
+    addMesh(reactorCore,new THREE.CylinderGeometry(.67,.67,3.3,24),
+      reactorMat,[0,1.95,0]);
+    addMesh(reactorCore,new THREE.CylinderGeometry(1.45,1.45,.28,24),
+      darkMetal,[0,.2,0]);
+    const reactorSpin=new THREE.Group();
+    reactorSpin.position.set(0,1.95,0);
+    reactorCore.add(reactorSpin);
+    for(const y of [-1.05,0,1.05]){
+      addMesh(reactorSpin,new THREE.TorusGeometry(1.15,.075,8,64),
+        holoMat,[0,y,0],[Math.PI/2,0,0]);
+    }
+    for(let i=0;i<6;i++){
+      const a=i*Math.PI/3;
+      const x=Math.cos(a)*2.05,z=21+Math.sin(a)*2.05;
+      addMesh(interior,new THREE.CylinderGeometry(.12,.12,3.5,10),
+        trimMat,[x,1.75,z]);
+    }
+    for(const x of [-4.7,4.7]){
+      ib(2.1,.9,1.0,darkMetal,x,.45,20.5);
+      ib(1.75,.58,.06,screenMat,x,1.12,20.0);
+      ib(1.7,.05,.12,warmLightMat,x,2.8,24.85);
+    }
+
+    // ---------- 模式、第一人称控制与漫游 ----------
+    let mode='exterior';
+    let exteriorSnapshot=null;
+    let yaw=0,pitch=0,dragging=false,lastX=0,lastY=0;
+    let keys={};
+    const canvas=renderer.domElement;
+
+    const spawns={
+      bridge:{p:[0,1.65,-16.25],yaw:0,name:'舰桥与导航中心'},
+      corridor:{p:[0,1.65,12],yaw:0,name:'中央连接通道'},
+      hydro:{p:[-2.8,1.65,0],yaw:Math.PI/2,name:'水培生态舱'},
+      habitat:{p:[2.8,1.65,0],yaw:-Math.PI/2,name:'居住与公共甲板'},
+      reactor:{p:[0,1.65,18.15],yaw:Math.PI,name:'反应堆与推进控制'}
+    };
+    const walkable=[
+      {minX:-2,maxX:2,minZ:-15,maxZ:17},
+      {minX:-7,maxX:7,minZ:-23,maxZ:-15},
+      {minX:-14,maxX:-2,minZ:-5,maxZ:5},
+      {minX:2,maxX:14,minZ:-5,maxZ:5},
+      {minX:-7,maxX:7,minZ:17,maxZ:25}
+    ];
+
+    let toastTimer;
+    function toast(text){
+      $('toast').textContent=text;
+      $('toast').classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1700);
+    }
+
+    function gotoRoom(id){
+      const r=spawns[id];
+      if(!r)return;
+      camera.position.set(...r.p);
+      yaw=r.yaw; pitch=0;
+      camera.rotation.set(pitch,yaw,0);
+      document.querySelectorAll('[data-room]').forEach(b =>
+        b.classList.toggle('active',b.dataset.room===id));
+      $('statusText').textContent=`内部甲板 · ${r.name}`;
+      toast(r.name);
+    }
+
+    function updateHelp(){
+      $('help').innerHTML=mode==='exterior'
+        ? '<b>左键拖动</b> 360° 环绕　<b>滚轮</b> 缩放　<b>右键</b> 平移<br>双击画面复位视角 · 悬停识别飞船部件'
+        : '<b>拖动鼠标</b> 观察　<b>WASD / 方向键</b> 移动　<b>Shift</b> 加速<br>左侧选择舱室 · Esc 返回外部';
+    }
+
+    function setMode(next){
+      if(next===mode)return;
+      if(next==='interior'){
+        exteriorSnapshot={
+          position:camera.position.clone(),
+          target:controls.target.clone()
+        };
+        mode='interior';
+        ship.visible=false;
+        interior.visible=true;
+        dust.visible=false;
+        controls.enabled=false;
+        camera.fov=68;
+        camera.updateProjectionMatrix();
+        keyLight.intensity=.25;
+        rimLight.intensity=.18;
+        ambient.intensity=.32;
+        renderer.toneMappingExposure=1.0;
+        keys={};
+        gotoRoom('corridor');
+      }else{
+        mode='exterior';
+        ship.visible=true;
+        interior.visible=false;
+        dust.visible=true;
+        controls.enabled=true;
+        camera.fov=45;
+        camera.updateProjectionMatrix();
+        keyLight.intensity=2.8;
+        rimLight.intensity=2.0;
+        ambient.intensity=.5;
+        renderer.toneMappingExposure=1.12;
+        if(exteriorSnapshot){
+          camera.position.copy(exteriorSnapshot.position);
+          controls.target.copy(exteriorSnapshot.target);
+        }
+        controls.update();
+        keys={};
+        $('statusText').textContent='外部航行 · 24/24 生态舱段在线';
+      }
+      document.body.classList.toggle('inside',mode==='interior');
+      $('exteriorBtn').classList.toggle('active',mode==='exterior');
+      $('interiorBtn').classList.toggle('active',mode==='interior');
+      $('partTip').style.display='none';
+      updateHelp();
+    }
+
+    $('exteriorBtn').onclick=()=>setMode('exterior');
+    $('interiorBtn').onclick=()=>setMode('interior');
+    $('cruiseBtn').onclick=()=>{
+      controls.autoRotate=!controls.autoRotate;
+      $('cruiseBtn').classList.toggle('active',controls.autoRotate);
+      toast(controls.autoRotate?'自动环绕已开启':'自动环绕已关闭');
+    };
+    document.querySelectorAll('[data-room]').forEach(b =>
+      b.onclick=()=>gotoRoom(b.dataset.room));
+
+    $('aboutBtn').onclick=()=>$('about').classList.toggle('hidden');
+    $('closeAbout').onclick=()=>$('about').classList.add('hidden');
+
+    canvas.addEventListener('dblclick',()=>{
+      if(mode!=='exterior')return;
+      camera.position.set(24,14,31);
+      controls.target.set(0,0,0);
+      controls.update();
+      toast('外部视角已复位');
+    });
+
+    canvas.addEventListener('pointerdown',e=>{
+      if(mode==='interior'&&e.button===0){
+        dragging=true; lastX=e.clientX; lastY=e.clientY;
+        canvas.setPointerCapture(e.pointerId);
+      }
+    });
+    canvas.addEventListener('pointerup',e=>{
+      dragging=false;
+      if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointercancel',()=>dragging=false);
+
+    const raycaster=new THREE.Raycaster();
+    const pointer=new THREE.Vector2();
+    canvas.addEventListener('pointermove',e=>{
+      if(mode==='interior'){
+        if(dragging){
+          const dx=e.clientX-lastX,dy=e.clientY-lastY;
+          lastX=e.clientX; lastY=e.clientY;
+          yaw-=dx*.0032;
+          pitch=THREE.MathUtils.clamp(pitch-dy*.0032,-1.42,1.42);
+        }
+        return;
+      }
+      pointer.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);
+      raycaster.setFromCamera(pointer,camera);
+      const hits=raycaster.intersectObjects(ship.children,true);
+      let part='';
+      if(hits.length){
+        let o=hits[0].object;
+        while(o&&o!==ship){
+          if(o.userData.part){part=o.userData.part;break;}
+          o=o.parent;
+        }
+      }
+      const tip=$('partTip');
+      if(part){
+        tip.textContent=part;
+        tip.style.display='block';
+        tip.style.left=Math.min(e.clientX+15,innerWidth-310)+'px';
+        tip.style.top=Math.min(e.clientY+15,innerHeight-55)+'px';
+      }else tip.style.display='none';
+    });
+    canvas.addEventListener('pointerleave',()=>$('partTip').style.display='none');
+
+    const movementCodes=new Set([
+      'KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
+      'ShiftLeft','ShiftRight'
+    ]);
+    addEventListener('keydown',e=>{
+      if(e.code==='Escape'){
+        if(!$('about').classList.contains('hidden'))$('about').classList.add('hidden');
+        else if(mode==='interior')setMode('exterior');
+      }
+      if(mode==='interior'&&movementCodes.has(e.code)){
+        keys[e.code]=true;
+        e.preventDefault();
+      }
+    });
+    addEventListener('keyup',e=>{keys[e.code]=false;});
+    addEventListener('blur',()=>{keys={};dragging=false;});
+
+    function canStand(x,z){
+      return walkable.some(r=>x>=r.minX&&x<=r.maxX&&z>=r.minZ&&z<=r.maxZ);
+    }
+    function crosses(a,b,c){return(a<c&&b>=c)||(a>c&&b<=c);}
+    function throughWall(ax,az,bx,bz){
+      for(const x of [-2,2]){
+        if(crosses(ax,bx,x)){
+          const t=(x-ax)/(bx-ax);
+          const z=az+(bz-az)*t;
+          if(z>-5&&z<5&&Math.abs(z)>1.34)return true;
+        }
+      }
+      for(const z of [-15,17]){
+        if(crosses(az,bz,z)){
+          const t=(z-az)/(bz-az);
+          const x=ax+(bx-ax)*t;
+          if(Math.abs(x)>1.34)return true;
+        }
+      }
+      return false;
+    }
+    function tryMove(dx,dz){
+      const p=camera.position;
+      const nx=p.x+dx,nz=p.z+dz;
+      if(canStand(nx,nz)&&!throughWall(p.x,p.z,nx,nz)){
+        p.x=nx;p.z=nz;
+      }
+    }
+    function updateInterior(dt){
+      camera.rotation.set(pitch,yaw,0);
+      let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0);
+      let r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+      if(!f&&!r)return;
+      const n=Math.hypot(f,r); f/=n;r/=n;
+      const speed=(keys.ShiftLeft||keys.ShiftRight?6.2:3.25)*dt;
+      const dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed;
+      const dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;
+      tryMove(dx,0);
+      tryMove(0,dz);
+    }
+
+    // ---------- 动画 ----------
+    const clock=new THREE.Clock();
+    function animate(){
+      requestAnimationFrame(animate);
+      const dt=Math.min(clock.getDelta(),.05);
+      const t=clock.elapsedTime;
+
+      ringA.rotation.z+=dt*.038;
+      ringB.rotation.z-=dt*.032;
+
+      engineSprites.forEach((s,i)=>{
+        const k=1+Math.sin(t*7+i*1.7)*.075;
+        s.scale.set(1.8*k,1.8*k,1);
+      });
+      engineGlowMat.opacity=.78+Math.sin(t*8)*.09;
+      exhaustMat.opacity=.105+Math.sin(t*5.3)*.025;
+      navMat.opacity=Math.sin(t*3.2)>.25?1:.18;
+
+      holoRings.forEach((r,i)=>{
+        r.rotation.y+=dt*(.25+i*.13);
+        r.rotation.z+=dt*(i%2?.18:-.13);
+      });
+      reactorSpin.rotation.y+=dt*.55;
+
+      if(mode==='exterior'){
+        controls.update();
+        const a=dustGeo.attributes.position;
+        for(let i=0;i<dustCount;i++){
+          let z=a.getZ(i)+dt*9;
+          if(z>60)z=-100;
+          a.setZ(i,z);
+        }
+        a.needsUpdate=true;
+      }else updateInterior(dt);
+
+      renderer.render(scene,camera);
+    }
+
+    addEventListener('resize',()=>{
+      camera.aspect=innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+      renderer.setSize(innerWidth,innerHeight);
+    });
+
+    // 供冒烟测试和二次开发使用。
+    window.AURORA={
+      version:'1.0.0',
+      habitatModules:24,
+      rooms:Object.keys(spawns),
+      get mode(){return mode;},
+      get drawCalls(){return renderer.info.render.calls;},
+      setMode,
+      goTo(id){setMode('interior');gotoRoom(id);}
+    };
+
+    updateHelp();
+    $('statusText').textContent='外部航行 · 24/24 生态舱段在线';
+    renderer.render(scene,camera);
+    animate();
+    requestAnimationFrame(()=>{
+      $('loading').classList.add('done');
+      setTimeout(()=>$('loading').remove(),700);
+    });
+  </script>
+</body>
+</html>

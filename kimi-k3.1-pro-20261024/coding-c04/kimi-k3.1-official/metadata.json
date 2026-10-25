@@ -1,0 +1,14 @@
+{
+  "campaign_id": "kimi-k3.1-pro-20261024",
+  "item_id": "coding-c04",
+  "model_alias": "kimi-k3.1-official",
+  "artifact_type": "svg",
+  "artifact_file": "answer.svg",
+  "artifact_sha256": "042ffaafb851636e2c6cb57ec5433a8e3756482e4e36da9ed7fd3918b5e284c7",
+  "source_answer_sha256": "f60f4dd97b375f17c5078beb867d60447ecca8a9fcaab3d83a9092718ba4d0a7",
+  "external_urls": [
+    "http://www.w3.org/2000/svg",
+    "http://localhost:8000/giraffe-car.svg`"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

@@ -1,0 +1,11 @@
+{
+  "campaign_id": "kimi-k3.1-pro-20261024",
+  "item_id": "coding-c02",
+  "model_alias": "kimi-k3.1-official",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "7e07d7b31a369ad8e24f279df877d0b2c762cb41d7fe5ff58e998aa8cd8bb4bc",
+  "source_answer_sha256": "adf58898a8d5fa80a0dae7b569c2bf004e94e5f481a451a7bf6574845a8dd133",
+  "external_urls": [],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

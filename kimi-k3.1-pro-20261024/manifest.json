@@ -1,0 +1,11 @@
+{
+  "campaign_id": "kimi-k3.1-pro-20261024",
+  "generated_at": "2026-10-25T03:54:58.518525+00:00",
+  "source_repository": "hqqnb/llm-evaluation-question-bank",
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "counts": {
+    "published": 8,
+    "not_extracted": 0,
+    "not_successful": 0
+  }
+}

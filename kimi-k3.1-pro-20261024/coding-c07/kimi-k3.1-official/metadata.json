@@ -1,0 +1,23 @@
+{
+  "campaign_id": "kimi-k3.1-pro-20261024",
+  "item_id": "coding-c07",
+  "model_alias": "kimi-k3.1-official",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "62251b2d166f685f85322cf696163d947db16c8e181c0ab37ee887cd5a0c2393",
+  "source_answer_sha256": "9faaedefcaf43b14bd9a6aab36ad936dcf0e7145b8d65510ddcc585a4aba37ae",
+  "external_urls": [
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg",
+    "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg",
+    "https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg",
+    "https://unpkg.com/three-globe/example/img/earth-night.jpg",
+    "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg",
+    "https://threejs.org/examples/textures/planets/earth_lights_2048.png",
+    "https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/DATA/world.geojson",
+    "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson",
+    "http://localhost:8080/index.html"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

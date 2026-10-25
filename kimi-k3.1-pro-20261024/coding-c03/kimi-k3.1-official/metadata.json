@@ -1,0 +1,15 @@
+{
+  "campaign_id": "kimi-k3.1-pro-20261024",
+  "item_id": "coding-c03",
+  "model_alias": "kimi-k3.1-official",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "809bfc18d5b15c8331baef3dd0f9fcafc56a95716f9d4223b8e3fd471bb31a8d",
+  "source_answer_sha256": "9a7b116eacfb58f6256c4e68bef11bc0ddb0b27ea46bfc9cd97734a0431d75ae",
+  "external_urls": [
+    "http://localhost:8080/contact-lens-case.html",
+    "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js",
+    "http://localhost:8080/contact-lens-case.html`"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

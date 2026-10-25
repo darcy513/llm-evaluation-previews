@@ -1,0 +1,15 @@
+{
+  "campaign_id": "kimi-k3.1-pro-20261024",
+  "item_id": "coding-c05",
+  "model_alias": "kimi-k3.1-official",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "9d7dfab9b3b403d65708d8ea4012fe798499aa2576bd563a1edbcf732da1ab2e",
+  "source_answer_sha256": "19aa007a97ad2a8c93dc9c5653fb15ed75ed93970832a0d7f60736262bcb77fd",
+  "external_urls": [
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "http://localhost:8080/index.html"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}
