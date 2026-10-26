@@ -8,5 +8,18 @@
     "reasoning_answers": 8,
     "not_extracted": 0,
     "not_successful": 0
-  }
+  },
+  "supplementary_batches": [
+    {
+      "date": "2026-10-26",
+      "path": "supplementary-20261026",
+      "status": "partial_draft",
+      "formal_score_updated": false,
+      "agent_valid_completed": 5,
+      "agent_total": 8,
+      "agent_completed_average_percent": 93.8947368421,
+      "mm04_suggested_score": "10/10",
+      "mm02_status": "technical_failure_http_429"
+    }
+  ]
 }

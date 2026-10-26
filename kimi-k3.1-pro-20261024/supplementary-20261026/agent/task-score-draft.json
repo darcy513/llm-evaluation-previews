@@ -1,0 +1,22 @@
+{
+  "campaign_id": "kimi-k3.1-pro-20261024",
+  "batch_id": "agent-suite-kimi-k3.1-pro-20261024",
+  "model": "kimi-k3.1-pro",
+  "reasoning_effort": "max",
+  "status": "supplementary_partial",
+  "tasks": [
+    {"task": "T01", "score": 100.0, "assertions": "10/10", "status": "valid_strict_pass"},
+    {"task": "T02", "score": 100.0, "assertions": "8/8", "status": "valid_strict_pass"},
+    {"task": "T03", "score": null, "assertions": "5/8 observed", "status": "technical_failure_provider_429", "note": "excluded from capability score"},
+    {"task": "T04", "score": null, "assertions": null, "status": "technical_failure_timeout", "note": "10-minute timeout; excluded from capability score"},
+    {"task": "T05", "score": null, "assertions": null, "status": "technical_failure_timeout", "note": "10-minute timeout; excluded from capability score"},
+    {"task": "T06", "score": 80.0, "assertions": "7/8", "status": "valid_partial"},
+    {"task": "T07", "score": 100.0, "assertions": "10/10", "status": "valid_strict_pass"},
+    {"task": "T08", "score": 89.473684, "assertions": "6/7", "status": "valid_partial"}
+  ],
+  "valid_completed_tasks": 5,
+  "technical_incomplete_tasks": 3,
+  "completed_task_average_percent": 93.8947368421,
+  "formal_score_update": false,
+  "source": "agent/agent-suite-partial.json"
+}
