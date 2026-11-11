@@ -43,6 +43,18 @@
         "reasoning-r01": "technical_failure",
         "coding-c08": "technical_failure"
       }
+    },
+    {
+      "date": "2026-11-11",
+      "path": "runs/ernie-5.5-flash-20261111-retry3",
+      "items": [
+        "reasoning-r01"
+      ],
+      "parallel_runs_per_item": 3,
+      "result": {
+        "reasoning-r01": "technical_failure"
+      },
+      "note": "all 3 streams cut at ~301s (incomplete_stream), 243-290KB reasoning, empty answer"
     }
   ],
   "text_variant_retests": [
