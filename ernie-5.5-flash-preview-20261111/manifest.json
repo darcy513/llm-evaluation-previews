@@ -7,10 +7,9 @@
     "published": 6,
     "not_extracted": 1,
     "not_successful": 1,
-    "reasoning_answers": 6
+    "reasoning_answers": 7
   },
   "unsupported_input": [
-    "reasoning-r02",
     "multimodal-mm01",
     "multimodal-mm02",
     "multimodal-mm03",
@@ -44,6 +43,16 @@
         "reasoning-r01": "technical_failure",
         "coding-c08": "technical_failure"
       }
+    }
+  ],
+  "text_variant_retests": [
+    {
+      "date": "2026-11-11",
+      "prompt_id": "reasoning-r02",
+      "run": "runs/ernie-5.5-flash-20261111-r02-text/20261111T152949514767Z-edf4ffdf",
+      "reason": "model rejects image_url (HTTP 400); image table converted to text table with identical counts",
+      "status": "success",
+      "final_answer": "29"
     }
   ]
 }
