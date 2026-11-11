@@ -1,0 +1,24 @@
+{
+  "campaign_id": "ernie-5.5-flash-preview-20261111",
+  "generated_at": "2026-11-11T08:43:58.513783+00:00",
+  "source_repository": "hqqnb/llm-evaluation-question-bank",
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "counts": {
+    "published": 5,
+    "not_extracted": 1,
+    "not_successful": 2,
+    "reasoning_answers": 6
+  },
+  "unsupported_input": [
+    "reasoning-r02",
+    "multimodal-mm01",
+    "multimodal-mm02",
+    "multimodal-mm03",
+    "multimodal-mm04"
+  ],
+  "technical_failures": [
+    "reasoning-r01",
+    "coding-c03",
+    "coding-c08"
+  ]
+}

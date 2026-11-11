@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>弓箭射击挑战</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: rgba(15, 23, 42, 0.92);
+    --accent: #f59e0b;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    color: var(--text);
+  }
+  #game {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    cursor: none;
+  }
+  .hud {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .hud .pill {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(8px);
+  }
+  .hud .pill span { color: var(--accent); }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10;
+    background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.55), rgba(2, 6, 23, 0.92));
+  }
+  .overlay.hidden { display: none; }
+  .panel {
+    width: min(920px, 100%);
+    max-height: 92vh;
+    overflow: auto;
+    background: var(--panel);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+  }
+  .panel h1 {
+    margin: 0 0 8px;
+    font-size: clamp(28px, 5vw, 48px);
+    letter-spacing: 2px;
+  }
+  .panel h2 { margin: 0 0 12px; font-size: 24px; }
+  .panel p { color: var(--muted); line-height: 1.7; margin: 8px 0; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 13px; color: var(--muted); }
+  input[type="text"] {
+    width: 220px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(2, 6, 23, 0.6);
+    color: var(--text);
+    font-size: 16px;
+    outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  button {
+    appearance: none;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    background: var(--accent);
+    color: #111827;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  button.secondary {
+    background: rgba(148, 163, 184, 0.18);
+    color: var(--text);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+    .panel { padding: 20px; }
+  }
+  .leaderboard {
+    background: rgba(2, 6, 23, 0.45);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 18px;
+    padding: 16px;
+  }
+  .leaderboard h3 { margin: 0 0 12px; font-size: 18px; }
+  .lb-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .lb-item {
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(148, 163, 184, 0.08);
+    font-size: 14px;
+  }
+  .lb-item.current {
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+  }
+  .lb-rank { font-weight: 900; color: var(--accent); text-align: center; }
+  .lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-time { font-variant-numeric: tabular-nums; font-weight: 800; }
+  .empty { color: var(--muted); font-size: 14px; padding: 12px; text-align: center; }
+  .result-time {
+    font-size: clamp(40px, 8vw, 72px);
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    margin: 8px 0 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .result-rank { font-size: 18px; color: var(--text); margin-bottom: 16px; }
+  .hint { font-size: 13px; color: var(--muted); }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div class="hud" id="hud">
+  <div class="pill">时间 <span id="timer">0.00</span>s</div>
+  <div class="pill">命中 <span id="hits">0</span>/4</div>
+</div>
+
+<div class="overlay" id="startOverlay">
+  <div class="panel">
+    <div class="grid">
+      <div>
+        <div class="badge">ARCHERY CHALLENGE</div>
+        <h1>弓箭射击挑战</h1>
+        <p>移动鼠标瞄准，点击发射弓箭。命中全部 4 个靶子后计时停止。用时越短，排行榜名次越高。</p>
+        <div class="row" style="margin-top:18px;">
+          <div class="field">
+            <label for="playerName">玩家昵称</label>
+            <input id="playerName" type="text" maxlength="16" placeholder="输入昵称" autocomplete="off">
+          </div>
+          <button id="startBtn">开始挑战</button>
+        </div>
+        <p class="hint">提示：计时从点击“开始挑战”后立即开始。每次射击有短暂冷却，注意瞄准。</p>
+      </div>
+      <div class="leaderboard">
+        <h3>排行榜（用时最短）</h3>
+        <ul class="lb-list" id="startLeaderboard"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="resultOverlay">
+  <div class="panel">
+    <div class="grid">
+      <div>
+        <div class="badge">挑战完成</div>
+        <h2>全部靶子已命中</h2>
+        <div class="result-time" id="resultTime">0.00s</div>
+        <div class="result-rank" id="resultRank">排名计算中...</div>
+        <div class="row" style="margin-top:18px;">
+          <button id="replayBtn">再来一局</button>
+          <button class="secondary" id="homeBtn">返回首页</button>
+        </div>
+        <p class="hint" id="resultHint"></p>
+      </div>
+      <div class="leaderboard">
+        <h3>排行榜（用时最短）</h3>
+        <ul class="lb-list" id="resultLeaderboard"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const timerEl = document.getElementById('timer');
+  const hitsEl = document.getElementById('hits');
+  const startOverlay = document.getElementById('startOverlay');
+  const resultOverlay = document.getElementById('resultOverlay');
+  const playerNameInput = document.getElementById('playerName');
+  const startBtn = document.getElementById('startBtn');
+  const replayBtn = document.getElementById('replayBtn');
+  const homeBtn = document.getElementById('homeBtn');
+  const resultTimeEl = document.getElementById('resultTime');
+  const resultRankEl = document.getElementById('resultRank');
+  const resultHintEl = document.getElementById('resultHint');
+  const startLeaderboardEl = document.getElementById('startLeaderboard');
+  const resultLeaderboardEl = document.getElementById('resultLeaderboard');
+
+  const STORAGE_KEY = 'archeryChallengeLeaderboard_v1';
+  const NAME_KEY = 'archeryChallengePlayerName';
+  const MAX_RECORDS = 50;
+  const TARGET_COUNT = 4;
+  const ARROW_SPEED = 1500;
+  const SHOT_COOLDOWN = 0.18;
+
+  let W = 0;
+  let H = 0;
+  let dpr = 1;
+  let state = 'menu';
+  let startTime = 0;
+  let elapsed = 0;
+  let finalTime = 0;
+  let lastFrame = 0;
+  let lastShotAt = -Infinity;
+  let aim = { x: 0, y: 0 };
+  let hasAim = false;
+  let arrows = [];
+  let particles = [];
+  let targets = [];
+  let currentPlayerName = '匿名玩家';
+  let currentRank = null;
+  let currentRecordId = null;
+
+  const targetDefs = [
+    { rx: 0.18, ry: 0.34, r: 34 },
+    { rx: 0.42, ry: 0.22, r: 30 },
+    { rx: 0.68, ry: 0.38, r: 36 },
+    { rx: 0.86, ry: 0.24, r: 28 }
+  ];
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    if (!hasAim) {
+      aim.x = W / 2;
+      aim.y = H * 0.35;
+    }
+
+    const maxY = Math.max(0, H - 120);
+    aim.x = Math.max(0, Math.min(W, aim.x));
+    aim.y = Math.max(0, Math.min(maxY, aim.y));
+  }
+
+  function setAim(x, y) {
+    const maxY = Math.max(0, H - 120);
+    aim.x = Math.max(0, Math.min(W, x));
+    aim.y = Math.max(0, Math.min(maxY, y));
+    hasAim = true;
+  }
+
+  function resetTargets() {
+    targets = targetDefs.map((def, i) => ({
+      id: i,
+      rx: def.rx,
+      ry: def.ry,
+      r: def.r,
+      hit: false,
+      hitAt: 0,
+      wobble: Math.random() * Math.PI * 2
+    }));
+  }
+
+  function getTargetPos(t) {
+    return { x: t.rx * W, y: t.ry * H };
+  }
+
+  function getBowPos() {
+    return { x: W / 2, y: Math.max(40, H - 72) };
+  }
+
+  function loadLeaderboard() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(r => r && typeof r.time === 'number' && isFinite(r.time) && r.time >= 0)
+        .map(r => ({
+          id: String(r.id || (Date.now() + '-' + Math.random())),
+          name: String(r.name || '匿名玩家').slice(0, 16),
+          time: Number(r.time),
+          date: String(r.date || '')
+        }))
+        .sort((a, b) => a.time - b.time)
+        .slice(0, MAX_RECORDS);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveLeaderboard(list) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_RECORDS)));
+    } catch (e) {
+      // localStorage 不可用时忽略
+    }
+  }
+
+  function addRecord(name, time) {
+    const list = loadLeaderboard();
+    const record = {
+      id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+      name: (name || '匿名玩家').trim().slice(0, 16) || '匿名玩家',
+      time: Math.max(0, time),
+      date: new Date().toISOString()
+    };
+
+    list.push(record);
+    list.sort((a, b) => a.time - b.time);
+
+    const rank = list.findIndex(r => r.id === record.id) + 1;
+    const trimmed = list.slice(0, MAX_RECORDS);
+    saveLeaderboard(trimmed);
+
+    return { record, rank, list: trimmed };
+  }
+
+  function formatTime(t) {
+    return (Math.round(t * 100) / 100).toFixed(2);
+  }
+
+  function renderLeaderboard(el, list, highlightId) {
+    el.innerHTML = '';
+
+    if (!list.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = '暂无记录，快来创造第一个成绩！';
+      el.appendChild(li);
+      return;
+    }
+
+    list.slice(0, 10).forEach((r, i) => {
+      const li = document.createElement('li');
+      li.className = 'lb-item' + (r.id === highlightId ? ' current' : '');
+
+      const rank = document.createElement('span');
+      rank.className = 'lb-rank';
+      rank.textContent = '#' + (i + 1);
+
+      const name = document.createElement('span');
+      name.className = 'lb-name';
+      name.textContent = r.name;
+
+      const time = document.createElement('span');
+      time.className = 'lb-time';
+      time.textContent = formatTime(r.time) + 's';
+
+      li.append(rank, name, time);
+      el.appendChild(li);
+    });
+  }
+
+  function refreshLeaderboards(highlightId) {
+    const list = loadLeaderboard();
+    renderLeaderboard(startLeaderboardEl, list, highlightId);
+    renderLeaderboard(resultLeaderboardEl, list, highlightId);
+  }
+
+  function showStart() {
+    state = 'menu';
+    startOverlay.classList.remove('hidden');
+    resultOverlay.classList.add('hidden');
+    refreshLeaderboards(null);
+    timerEl.textContent = '0.00';
+    hitsEl.textContent = '0';
+    arrows = [];
+    particles = [];
+    resetTargets();
+    hasAim = false;
+
+    try {
+      const savedName = localStorage.getItem(NAME_KEY);
+      if (savedName && !playerNameInput.value) playerNameInput.value = savedName;
+    } catch (e) {}
+
+    draw();
+  }
+
+  function startGame() {
+    const name = (playerNameInput.value || '').trim().slice(0, 16) || '匿名玩家';
+    currentPlayerName = name;
+
+    try {
+      localStorage.setItem(NAME_KEY, name);
+    } catch (e) {}
+
+    state = 'playing';
+    startOverlay.classList.add('hidden');
+    resultOverlay.classList.add('hidden');
+
+    resetTargets();
+    arrows = [];
+    particles = [];
+    lastShotAt = -Infinity;
+    startTime = performance.now();
+    elapsed = 0;
+    finalTime = 0;
+    currentRank = null;
+    currentRecordId = null;
+
+    timerEl.textContent = '0.00';
+    hitsEl.textContent = '0';
+
+    setAim(W / 2, H * 0.35);
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function finishGame() {
+    if (state !== 'playing') return;
+
+    state = 'finished';
+    finalTime = Math.max(0, (performance.now() - startTime) / 1000);
+    elapsed = finalTime;
+    timerEl.textContent = formatTime(finalTime);
+
+    const result = addRecord(currentPlayerName, finalTime);
+    currentRank = result.rank;
+    currentRecordId = result.record.id;
+
+    resultTimeEl.textContent = formatTime(finalTime) + 's';
+
+    if (currentRank === 1) {
+      resultRankEl.textContent = '🏆 新纪录！当前排名第 1';
+    } else {
+      resultRankEl.textContent = '当前排名：第 ' + currentRank + ' 名';
+    }
+
+    resultHintEl.textContent = '成绩已保存到本地排行榜。刷新页面后仍会保留。';
+    refreshLeaderboards(currentRecordId);
+    resultOverlay.classList.remove('hidden');
+  }
+
+  function shoot() {
+    if (state !== 'playing') return;
+
+    const now = performance.now() / 1000;
+    if (now - lastShotAt < SHOT_COOLDOWN) return;
+    lastShotAt = now;
+
+    const bow = getBowPos();
+    let dx = aim.x - bow.x;
+    let dy = aim.y - bow.y;
+    const len = Math.hypot(dx, dy);
+
+    if (len < 1) {
+      dx = 0;
+      dy = -1;
+    } else {
+      dx /= len;
+      dy /= len;
+    }
+
+    arrows.push({
+      x: bow.x,
+      y: bow.y,
+      px: bow.x,
+      py: bow.y,
+      vx: dx * ARROW_SPEED,
+      vy: dy * ARROW_SPEED,
+      angle: Math.atan2(dy, dx),
+      alive: true,
+      trail: []
+    });
+
+    for (let i = 0; i < 6; i++) {
+      particles.push({
+        x: bow.x + dx * 20,
+        y: bow.y + dy * 20,
+        vx: dx * (80 + Math.random() * 120) + (Math.random() - 0.5) * 80,
+        vy: dy * (80 + Math.random() * 120) + (Math.random() - 0.5) * 80,
+        life: 0.25 + Math.random() * 0.2,
+        maxLife: 0.45,
+        size: 2 + Math.random() * 3,
+        color: 'rgba(245,158,11,0.9)'
+      });
+    }
+  }
+
+  function segmentCircleHit(x1, y1, x2, y2, cx, cy, r) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const fx = x1 - cx;
+    const fy = y1 - cy;
+    const a = dx * dx + dy * dy;
+
+    if (a === 0) {
+      return (fx * fx + fy * fy) <= r * r;
+    }
+
+    let t = -(fx * dx + fy * dy) / a;
+    t = Math.max(0, Math.min(1, t));
+
+    const px = x1 + t * dx;
+    const py = y1 + t * dy;
+    const ddx = px - cx;
+    const ddy = py - cy;
+
+    return ddx * ddx + ddy * ddy <= r * r;
+  }
+
+  function update(dt) {
+    if (state === 'playing') {
+      elapsed = (performance.now() - startTime) / 1000;
+      timerEl.textContent = formatTime(elapsed);
+    }
+
+    for (const arrow of arrows) {
+      if (!arrow.alive) continue;
+
+      arrow.px = arrow.x;
+      arrow.py = arrow.y;
+      arrow.x += arrow.vx * dt;
+      arrow.y += arrow.vy * dt;
+
+      arrow.trail.push({ x: arrow.x, y: arrow.y });
+      if (arrow.trail.length > 12) arrow.trail.shift();
+
+      for (const t of targets) {
+        if (t.hit) continue;
+
+        const pos = getTargetPos(t);
+        if (segmentCircleHit(arrow.px, arrow.py, arrow.x, arrow.y, pos.x, pos.y, t.r)) {
+          t.hit = true;
+          t.hitAt = performance.now() / 1000;
+          arrow.alive = false;
+
+          for (let i = 0; i < 18; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const sp = 60 + Math.random() * 220;
+            particles.push({
+              x: pos.x,
+              y: pos.y,
+              vx: Math.cos(ang) * sp,
+              vy: Math.sin(ang) * sp,
+              life: 0.4 + Math.random() * 0.4,
+              maxLife: 0.8,
+              size: 2 + Math.random() * 4,
+              color: i % 3 === 0 ? 'rgba(245,158,11,0.95)' : 'rgba(255,255,255,0.85)'
+            });
+          }
+
+          const hitCount = targets.filter(x => x.hit).length;
+          hitsEl.textContent = String(hitCount);
+
+          if (hitCount === TARGET_COUNT) {
+            finishGame();
+          }
+
+          break;
+        }
+      }
+
+      if (arrow.x < -100 || arrow.x > W + 100 || arrow.y < -100 || arrow.y > H + 100) {
+        arrow.alive = false;
+      }
+    }
+
+    arrows = arrows.filter(a => a.alive);
+
+    for (const p of particles) {
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+    }
+
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function drawBackground() {
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#0b1220');
+    sky.addColorStop(0.55, '#111c33');
+    sky.addColorStop(1, '#1f2937');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    const glow = ctx.createRadialGradient(
+      W * 0.78, H * 0.18, 10,
+      W * 0.78, H * 0.18, Math.min(W, H) * 0.35
+    );
+    glow.addColorStop(0, 'rgba(245,158,11,0.18)');
+    glow.addColorStop(1, 'rgba(245,158,11,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = 'rgba(15,23,42,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.62);
+    for (let x = 0; x <= W; x += 40) {
+      const y = H * 0.62 + Math.sin(x * 0.008) * 18 + Math.sin(x * 0.021) * 8;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    const ground = ctx.createLinearGradient(0, H * 0.62, 0, H);
+    ground.addColorStop(0, '#1f2937');
+    ground.addColorStop(1, '#0b1220');
+    ctx.fillStyle = ground;
+    ctx.fillRect(0, H * 0.62, W, H * 0.38);
+
+    ctx.strokeStyle = 'rgba(148,163,184,0.12)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 5; i++) {
+      const y = H * 0.62 + (H * 0.38) * (i / 6);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  }
+
+  function drawBullseye(x, y, r) {
+    const rings = [
+      { r: 1.0, color: '#f8fafc' },
+      { r: 0.8, color: '#ef4444' },
+      { r: 0.6, color: '#f8fafc' },
+      { r: 0.4, color: '#ef4444' },
+      { r: 0.2, color: '#f59e0b' }
+    ];
+
+    for (const ring of rings) {
+      ctx.fillStyle = ring.color;
+      ctx.beginPath();
+      ctx.arc(x, y, r * ring.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = 'rgba(15,23,42,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  function drawTarget(t) {
+    const pos = getTargetPos(t);
+    const r = t.r;
+    const now = performance.now() / 1000;
+    const wobble = t.hit ? 0 : Math.sin(now * 2 + t.wobble) * 2;
+    const x = pos.x;
+    const y = pos.y + wobble;
+
+    ctx.strokeStyle = 'rgba(148,163,184,0.35)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(x, y + r);
+    ctx.lineTo(x, H * 0.62 + 20);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x, H * 0.62 + 24, r * 0.9, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (t.hit) {
+      ctx.globalAlpha = 0.35;
+      drawBullseye(x, y, r);
+      ctx.globalAlpha = 1;
+
+      ctx.strokeStyle = 'rgba(34,197,94,0.9)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.35, y);
+      ctx.lineTo(x - r * 0.05, y + r * 0.3);
+      ctx.lineTo(x + r * 0.45, y - r * 0.35);
+      ctx.stroke();
+    } else {
+      drawBullseye(x, y, r);
+
+      const pulse = 0.5 + 0.5 * Math.sin(now * 3 + t.wobble);
+      ctx.strokeStyle = 'rgba(245,158,11,' + (0.15 + pulse * 0.25) + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, r + 6 + pulse * 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  function drawBow() {
+    const bow = getBowPos();
+    const dx = aim.x - bow.x;
+    const dy = aim.y - bow.y;
+    const angle = Math.atan2(dy, dx);
+
+    ctx.save();
+    ctx.translate(bow.x, bow.y);
+    ctx.rotate(angle);
+
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 34, -Math.PI * 0.55, Math.PI * 0.55);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(226,232,240,0.8)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(34 * Math.cos(-Math.PI * 0.55), 34 * Math.sin(-Math.PI * 0.55));
+    ctx.lineTo(0, 0);
+    ctx.lineTo(34 * Math.cos(Math.PI * 0.55), 34 * Math.sin(Math.PI * 0.55));
+    ctx.stroke();
+
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(46, 0);
+    ctx.stroke();
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.moveTo(46, 0);
+    ctx.lineTo(38, -4);
+    ctx.lineTo(38, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawArrow(arrow) {
+    for (let i = 0; i < arrow.trail.length; i++) {
+      const p = arrow.trail[i];
+      const alpha = (i / arrow.trail.length) * 0.35;
+      ctx.strokeStyle = 'rgba(245,158,11,' + alpha + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - arrow.vx * 0.01, p.y - arrow.vy * 0.01);
+      ctx.stroke();
+    }
+
+    ctx.save();
+    ctx.translate(arrow.x, arrow.y);
+    ctx.rotate(arrow.angle);
+
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-28, 0);
+    ctx.lineTo(0, 0);
+    ctx.stroke();
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-8, -4);
+    ctx.lineTo(-8, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-28, 0);
+    ctx.lineTo(-34, -5);
+    ctx.moveTo(-28, 0);
+    ctx.lineTo(-34, 5);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      const alpha = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawCrosshair() {
+    if (!hasAim) return;
+
+    const x = aim.x;
+    const y = aim.y;
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(245,158,11,0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 12, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y);
+    ctx.lineTo(x - 6, y);
+    ctx.moveTo(x + 6, y);
+    ctx.lineTo(x + 20, y);
+    ctx.moveTo(x, y - 20);
+    ctx.lineTo(x, y - 6);
+    ctx.moveTo(x, y + 6);
+    ctx.lineTo(x, y + 20);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(245,158,11,0.9)';
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw() {
+    drawBackground();
+
+    for (const t of targets) drawTarget(t);
+    for (const arrow of arrows) drawArrow(arrow);
+
+    drawParticles();
+    drawBow();
+    drawCrosshair();
+  }
+
+  function loop(now) {
+    if (!lastFrame) lastFrame = now;
+
+    let dt = (now - lastFrame) / 1000;
+    lastFrame = now;
+
+    if (dt > 0.05) dt = 0.05;
+
+    if (state === 'playing' || state === 'finished') {
+      update(dt);
+      draw();
+    } else {
+      draw();
+    }
+
+    if (state === 'playing') {
+      requestAnimationFrame(loop);
+    }
+  }
+
+  window.addEventListener('resize', resize);
+
+  window.addEventListener('pointermove', (e) => {
+    if (state !== 'playing') return;
+    setAim(e.clientX, e.clientY);
+  });
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (state !== 'playing') return;
+    setAim(e.clientX, e.clientY);
+    shoot();
+  });
+
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  startBtn.addEventListener('click', () => {
+    startGame();
+  });
+
+  replayBtn.addEventListener('click', () => {
+    startGame();
+  });
+
+  homeBtn.addEventListener('click', () => {
+    showStart();
+  });
+
+  playerNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      startGame();
+    }
+  });
+
+  resize();
+  resetTargets();
+  showStart();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "campaign_id": "ernie-5.5-flash-preview-20261111",
+  "item_id": "coding-c02",
+  "model_alias": "ernie-5.5-flash-preview",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "4bfd7d469061970f7c3cb5a7ca9c4af44747785954346fd9cff6b995c9cdf7eb",
+  "source_answer_sha256": "bc166b46efbe3168253934e938e9273bdfadb408c06fe2462c8925eb496288d6",
+  "external_urls": [],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

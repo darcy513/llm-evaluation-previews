@@ -1,0 +1,16 @@
+{
+  "campaign_id": "ernie-5.5-flash-preview-20261111",
+  "item_id": "coding-c07",
+  "model_alias": "ernie-5.5-flash-preview",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "522761026e36e9535dd20e0f9ecef47bc9bb836d26f3e9534bb34df600a2db02",
+  "source_answer_sha256": "1f8abafe997a8d94d686ecd284fa252c51820292550e588044c6b80a7f7a30fd",
+  "external_urls": [
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "https://unpkg.com/three-globe/example/img/",
+    "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

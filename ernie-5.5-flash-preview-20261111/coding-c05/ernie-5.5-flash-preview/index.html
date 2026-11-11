@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>3D 双时区腕表</title>
+<style>
+  :root{
+    --bg:#05070c;
+    --panel:rgba(12,18,30,.72);
+    --border:rgba(120,160,220,.18);
+    --text:#e8eef8;
+    --muted:#8fa3c0;
+    --accent:#ff8a3d;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;overflow:hidden;}
+  body{
+    background:radial-gradient(circle at 50% 38%,#16233a 0%,#0a0f18 45%,#04060a 100%);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{position:fixed;inset:0;}
+  canvas{display:block;}
+
+  #ui{
+    position:fixed;top:20px;left:20px;width:300px;
+    padding:18px 18px 16px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:18px;
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    box-shadow:0 16px 48px rgba(0,0,0,.55);
+    z-index:10;user-select:none;
+  }
+  #ui .title{
+    font-size:13px;letter-spacing:.22em;font-weight:600;
+    margin-bottom:14px;display:flex;align-items:center;gap:8px;
+  }
+  #ui .title span{
+    font-size:10px;letter-spacing:.1em;color:var(--accent);
+    border:1px solid rgba(255,138,61,.4);border-radius:5px;padding:2px 5px;
+  }
+  .field{margin-bottom:10px;}
+  .field label{
+    display:block;font-size:11px;color:var(--muted);
+    margin-bottom:5px;letter-spacing:.08em;
+  }
+  .field select{
+    width:100%;padding:8px 10px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(120,160,220,.2);
+    border-radius:9px;color:var(--text);
+    font-size:12.5px;font-family:inherit;outline:none;cursor:pointer;
+    transition:border-color .2s,background .2s;
+  }
+  .field select:hover{border-color:rgba(120,160,220,.45);}
+  .field select:focus{border-color:var(--accent);}
+  .field select option{background:#0d1420;color:var(--text);}
+
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
+  .card{
+    background:rgba(255,255,255,.035);
+    border:1px solid rgba(120,160,220,.12);
+    border-radius:11px;padding:9px 10px;
+  }
+  .card .city{
+    font-size:10px;letter-spacing:.12em;color:var(--muted);
+    text-transform:uppercase;margin-bottom:4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .card .time{
+    font-size:17px;font-weight:600;
+    font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  }
+  .card .date{
+    font-size:10.5px;color:var(--muted);margin-top:3px;
+    font-variant-numeric:tabular-nums;
+  }
+  #cardB .time{color:var(--accent);}
+
+  #hint{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+    font-size:11.5px;letter-spacing:.1em;
+    color:rgba(160,180,210,.55);z-index:10;
+    pointer-events:none;user-select:none;
+  }
+  #loading{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:#05070c;z-index:100;transition:opacity .6s ease;
+    font-size:13px;letter-spacing:.2em;color:var(--muted);
+  }
+  #loading.hidden{opacity:0;pointer-events:none;}
+  @media (max-width:640px){
+    #ui{width:calc(100% - 32px);left:16px;top:16px;padding:14px;}
+    #hint{display:none;}
+  }
+</style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="ui">
+    <div class="title">DUAL TIME <span>3D</span></div>
+    <div class="field">
+      <label for="tzA">主时区 · 表盘指针</label>
+      <select id="tzA"></select>
+    </div>
+    <div class="field">
+      <label for="tzB">副时区 · 6点位小表盘</label>
+      <select id="tzB"></select>
+    </div>
+    <div class="cards">
+      <div class="card" id="cardA">
+        <div class="city">—</div>
+        <div class="time">--:--:--</div>
+        <div class="date">—</div>
+      </div>
+      <div class="card" id="cardB">
+        <div class="city">—</div>
+        <div class="time">--:--:--</div>
+        <div class="date">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hint">拖动旋转 · 滚轮缩放</div>
+  <div id="loading">LOADING…</div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+  const TAU = Math.PI * 2;
+  const DIAL_R = 1.88;
+  const pad = (n) => String(n).padStart(2, '0');
+
+  /* ============================================================
+     时区工具
+     ============================================================ */
+  const dtfCache = new Map();
+  function getFormatter(tz) {
+    let f = dtfCache.get(tz);
+    if (!f) {
+      f = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        weekday: 'short'
+      });
+      dtfCache.set(tz, f);
+    }
+    return f;
+  }
+
+  function getParts(date, tz) {
+    const parts = getFormatter(tz).formatToParts(date);
+    const o = {};
+    for (const p of parts) if (p.type !== 'literal') o[p.type] = p.value;
+    let hour = +o.hour;
+    if (hour === 24) hour = 0;
+    return {
+      year: +o.year, month: +o.month, day: +o.day,
+      hour, minute: +o.minute, second: +o.second,
+      weekday: o.weekday
+    };
+  }
+
+  const CITY_CODES = {
+    'UTC': 'UTC',
+    'Asia/Tokyo': 'TYO',
+    'America/New_York': 'NYC',
+    'Europe/London': 'LON',
+    'Europe/Paris': 'PAR',
+    'Asia/Shanghai': 'SHA',
+    'Asia/Hong_Kong': 'HKG',
+    'Asia/Singapore': 'SIN',
+    'Asia/Dubai': 'DXB',
+    'Australia/Sydney': 'SYD',
+    'America/Los_Angeles': 'LAX',
+    'America/Chicago': 'CHI',
+    'Europe/Berlin': 'BER',
+    'Europe/Moscow': 'MOW',
+    'Asia/Seoul': 'SEL',
+    'Asia/Kolkata': 'KOL',
+    'America/Sao_Paulo': 'SAO',
+    'Africa/Johannesburg': 'JNB',
+    'Pacific/Auckland': 'AKL'
+  };
+
+  function cityCode(tz) {
+    if (CITY_CODES[tz]) return CITY_CODES[tz];
+    const last = tz.split('/').pop().replace(/_/g, '');
+    return last.slice(0, 3).toUpperCase();
+  }
+
+  function cityLabel(tz) {
+    if (tz === 'UTC') return 'UTC';
+    return tz.split('/').pop().replace(/_/g, ' ');
+  }
+
+  const WD_CN = { Sun:'周日', Mon:'周一', Tue:'周二', Wed:'周三', Thu:'周四', Fri:'周五', Sat:'周六' };
+
+  const state = {
+    tzA: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    tzB: 'Asia/Tokyo'
+  };
+  if (state.tzB === state.tzA) state.tzB = 'America/New_York';
+
+  /* ============================================================
+     渲染器 / 场景 / 相机
+     ============================================================ */
+  const container = document.getElementById('app');
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  container.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
+
+  const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+  keyLight.position.set(5, 7, 9);
+  scene.add(keyLight);
+
+  const rimLight = new THREE.DirectionalLight(0x7fa8ff, 1.8);
+  rimLight.position.set(-7, -3, -6);
+  scene.add(rimLight);
+
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  fillLight.position.set(-5, 5, 7);
+  scene.add(fillLight);
+
+  /* ============================================================
+     材质
+     ============================================================ */
+  const steelMat = new THREE.MeshStandardMaterial({
+    color: 0xc9d2de, metalness: 1.0, roughness: 0.22, envMapIntensity: 1.3
+  });
+  const polishedMat = new THREE.MeshStandardMaterial({
+    color: 0xdfe7f2, metalness: 1.0, roughness: 0.12, envMapIntensity: 1.5
+  });
+  const darkSteelMat = new THREE.MeshStandardMaterial({
+    color: 0x8a94a4, metalness: 1.0, roughness: 0.35, envMapIntensity: 1.0
+  });
+  const strapMat = new THREE.MeshStandardMaterial({
+    color: 0x2a211c, roughness: 0.78, metalness: 0.05, envMapIntensity: 0.5
+  });
+
+  /* ============================================================
+     表盘贴图
+     ============================================================ */
+  function drawSpaced(ctx, text, x, y, spacing) {
+    const chars = [...text];
+    const widths = chars.map(c => ctx.measureText(c).width);
+    const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
+    let cur = x - total / 2;
+    const prev = ctx.textAlign;
+    ctx.textAlign = 'left';
+    for (let i = 0; i < chars.length; i++) {
+      ctx.fillText(chars[i], cur, y);
+      cur += widths[i] + spacing;
+    }
+    ctx.textAlign = prev;
+  }
+
+  function createDialTexture() {
+    const S = 1024;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = S;
+    const ctx = cv.getContext('2d');
+    const cx = S / 2, cy = S / 2;
+    const R = S / 2;
+    const U = R / DIAL_R;
+    const px = (x) => cx + x * U;
+    const py = (y) => cy - y * U;
+
+    // 底色
+    ctx.fillStyle = '#0a1018';
+    ctx.fillRect(0, 0, S, S);
+
+    // 太阳纹
+    const N = 180;
+    for (let i = 0; i < N; i++) {
+      const a0 = (i / N) * TAU;
+      const a1 = ((i + 1) / N) * TAU;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, R, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.10)';
+      ctx.fill();
+    }
+
+    // 径向明暗
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+    g.addColorStop(0, 'rgba(70,110,170,0.28)');
+    g.addColorStop(0.55, 'rgba(20,35,60,0.04)');
+    g.addColorStop(1, 'rgba(0,0,0,0.62)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, S, S);
+
+    // 分钟刻度
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 60; i++) {
+      const a = (i / 60) * TAU - Math.PI / 2;
+      const isHour = i % 5 === 0;
+      const r1 = (isHour ? 1.70 : 1.755) * U;
+      const r2 = 1.82 * U;
+      ctx.beginPath();
+      ctx.lineWidth = isHour ? 5 : 2.5;
+      ctx.strokeStyle = isHour ? 'rgba(225,238,255,0.9)' : 'rgba(190,210,240,0.55)';
+      ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+      ctx.stroke();
+    }
+
+    // 品牌文字
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#e8f0ff';
+    ctx.font = '600 46px "Helvetica Neue", Arial, sans-serif';
+    drawSpaced(ctx, 'CHRONOS', cx, py(1.14), 13);
+    ctx.fillStyle = 'rgba(190,210,240,0.7)';
+    ctx.font = '400 21px "Helvetica Neue", Arial, sans-serif';
+    drawSpaced(ctx, 'DUAL TIME', cx, py(0.94), 9);
+
+    // 6 点位 24 小时小表盘
+    const sdcx = px(0), sdcy = py(-0.92), sdr = 0.42 * U;
+    ctx.beginPath();
+    ctx.arc(sdcx, sdcy, sdr, 0, TAU);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(190,210,240,0.4)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * TAU - Math.PI / 2;
+      const major = i % 6 === 0;
+      const r1 = sdr * (major ? 0.70 : 0.82);
+      const r2 = sdr * 0.94;
+      ctx.beginPath();
+      ctx.lineWidth = major ? 4 : 2;
+      ctx.strokeStyle = major ? 'rgba(235,244,255,0.95)' : 'rgba(190,210,240,0.5)';
+      ctx.moveTo(sdcx + Math.cos(a) * r1, sdcy + Math.sin(a) * r1);
+      ctx.lineTo(sdcx + Math.cos(a) * r2, sdcy + Math.sin(a) * r2);
+      ctx.stroke();
+    }
+
+    // 日期 / 星期窗口边框
+    const drawWindowFrame = (x, y, w, h) => {
+      const X = px(x) - (w * U) / 2;
+      const Y = py(y) - (h * U) / 2;
+      const W = w * U, H = h * U;
+      const r = 12;
+      ctx.beginPath();
+      ctx.moveTo(X + r, Y);
+      ctx.arcTo(X + W, Y, X + W, Y + H, r);
+      ctx.arcTo(X + W, Y + H, X, Y + H, r);
+      ctx.arcTo(X, Y + H, X, Y, r);
+      ctx.arcTo(X, Y, X + W, Y, r);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(200,220,250,0.5)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    };
+    drawWindowFrame(1.35, 0, 0.46, 0.34);
+    drawWindowFrame(-1.35, 0, 0.46, 0.34);
+
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+  }
+
+  /* ============================================================
+     腕表模型
+     ============================================================ */
+  const watch = new THREE.Group();
+  watch.rotation.set(-0.12, 0.08, 0);
+  scene.add(watch);
+
+  // 表壳
+  const caseGeo = new THREE.CylinderGeometry(2.1, 2.1, 0.55, 96, 1, false);
+  caseGeo.rotateX(Math.PI / 2);
+  watch.add(new THREE.Mesh(caseGeo, steelMat));
+
+  // 表圈
+  const bezel = new THREE.Mesh(new THREE.TorusGeometry(2.02, 0.12, 24, 96), polishedMat);
+  bezel.position.z = 0.30;
+  watch.add(bezel);
+
+  // 底盖
+  const backGeo = new THREE.CylinderGeometry(1.95, 1.95, 0.08, 96);
+  backGeo.rotateX(Math.PI / 2);
+  const backMesh = new THREE.Mesh(backGeo, darkSteelMat);
+  backMesh.position.z = -0.31;
+  watch.add(backMesh);
+
+  // 表盘
+  const dialTex = createDialTexture();
+  const dialMesh = new THREE.Mesh(
+    new THREE.CircleGeometry(DIAL_R, 96),
+    new THREE.MeshStandardMaterial({
+      map: dialTex, roughness: 0.72, metalness: 0.2, envMapIntensity: 0.6
+    })
+  );
+  dialMesh.position.z = 0.28;
+  watch.add(dialMesh);
+
+  // 立体时标
+  const indexGeo = new THREE.BoxGeometry(0.07, 0.24, 0.04);
+  const indexMat = new THREE.MeshStandardMaterial({
+    color: 0xe6eefb, metalness: 0.9, roughness: 0.2, envMapIntensity: 1.4
+  });
+  for (let i = 0; i < 12; i++) {
+    if (i === 3 || i === 9) continue; // 3/9 点位让给日期/星期窗口
+    const a = (i / 12) * TAU;
+    const r = 1.55;
+    const m = new THREE.Mesh(indexGeo, indexMat);
+    m.position.set(Math.sin(a) * r, Math.cos(a) * r, 0.30);
+    m.rotation.z = -a;
+    if (i === 0) m.scale.set(1.7, 1.15, 1);
+    watch.add(m);
+  }
+
+  // 指针工厂
+  function makeHand(length, width, tail, depth, bevel, color, metalness, roughness) {
+    const s = new THREE.Shape();
+    const w = width / 2;
+    s.moveTo(-w, -tail);
+    s.lineTo(w, -tail);
+    s.lineTo(w * 0.88, length * 0.68);
+    s.lineTo(0, length);
+    s.lineTo(-w * 0.88, length * 0.68);
+    s.closePath();
+    const geo = new THREE.ExtrudeGeometry(s, {
+      depth,
+      bevelEnabled: true,
+      bevelThickness: bevel,
+      bevelSize: bevel * 0.8,
+      bevelSegments: 2,
+      curveSegments: 2
+    });
+    const mat = new THREE.MeshStandardMaterial({
+      color, metalness, roughness,
+      envMapIntensity: 1.3,
+      side: THREE.DoubleSide
+    });
+    return new THREE.Mesh(geo, mat);
+  }
+
+  const hourHand = makeHand(1.15, 0.10, 0.22, 0.025, 0.005, 0xdfe8f5, 0.9, 0.2);
+  hourHand.position.z = 0.33;
+  watch.add(hourHand);
+
+  const minuteHand = makeHand(1.68, 0.07, 0.26, 0.02, 0.004, 0xdfe8f5, 0.9, 0.2);
+  minuteHand.position.z = 0.375;
+  watch.add(minuteHand);
+
+  const secondHand = makeHand(1.80, 0.022, 0.36, 0.012, 0.003, 0xff5a3c, 0.35, 0.35);
+  secondHand.position.z = 0.41;
+  watch.add(secondHand);
+
+  // 秒针配重
+  const cwGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.018, 24);
+  cwGeo.rotateX(Math.PI / 2);
+  const cw = new THREE.Mesh(cwGeo, secondHand.material);
+  cw.position.set(0, -0.28, 0.006);
+  secondHand.add(cw);
+
+  // 6 点位 24 小时指针（副时区）
+  const subHand = makeHand(0.34, 0.03, 0.07, 0.01, 0.002, 0xff8a3d, 0.5, 0.35);
+  subHand.position.set(0, -0.92, 0.29);
+  watch.add(subHand);
+
+  // 中心轴帽
+  const capGeo = new THREE.CylinderGeometry(0.075, 0.095, 0.06, 32);
+  capGeo.rotateX(Math.PI / 2);
+  const cap = new THREE.Mesh(capGeo, polishedMat);
+  cap.position.z = 0.47;
+  watch.add(cap);
+
+  // 蓝宝石镜面（球冠）
+  const CR = 12;
+  const theta = Math.asin(1.88 / CR);
+  const crystalGeo = new THREE.SphereGeometry(CR, 64, 32, 0, TAU, 0, theta);
+  crystalGeo.rotateX(Math.PI / 2);
+  const crystal = new THREE.Mesh(crystalGeo, new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    metalness: 0,
+    roughness: 0.03,
+    transparent: true,
+    opacity: 0.10,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    envMapIntensity: 3.0
+  }));
+  crystal.position.z = 0.44 - CR * Math.cos(theta);
+  watch.add(crystal);
+
+  // 表冠
+  const crownGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.24, 24);
+  crownGeo.rotateZ(Math.PI / 2);
+  const crown = new THREE.Mesh(crownGeo, polishedMat);
+  crown.position.set(2.2, 0, 0);
+  watch.add(crown);
+
+  // 表耳
+  const lugGeo = new THREE.BoxGeometry(0.26, 0.5, 0.3);
+  for (const sx of [-1, 1]) {
+    for (const sy of [-1, 1]) {
+      const lug = new THREE.Mesh(lugGeo, steelMat);
+      lug.position.set(sx * 0.78, sy * 2.0, -0.02);
+      watch.add(lug);
+    }
+  }
+
+  // 表带（分段折线，向后弯曲）
+  function addStrap(points, widths) {
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i], p2 = points[i + 1];
+      const dir = new THREE.Vector3().subVectors(p2, p1);
+      const len = dir.length();
+      dir.normalize();
+      const a = p1.clone().addScaledVector(dir, -0.04);
+      const b = p2.clone().addScaledVector(dir, 0.04);
+      const geo = new THREE.BoxGeometry(widths[i], len + 0.08, 0.09);
+      const mesh = new THREE.Mesh(geo, strapMat);
+      mesh.position.copy(a).add(b).multiplyScalar(0.5);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      watch.add(mesh);
+    }
+  }
+
+  const topPts = [
+    new THREE.Vector3(0, 1.80, 0.02),
+    new THREE.Vector3(0, 2.30, -0.10),
+    new THREE.Vector3(0, 2.70, -0.40),
+    new THREE.Vector3(0, 2.95, -0.85),
+    new THREE.Vector3(0, 3.00, -1.35)
+  ];
+  const botPts = [
+    new THREE.Vector3(0, -1.80, 0.02),
+    new THREE.Vector3(0, -2.30, -0.10),
+    new THREE.Vector3(0, -2.70, -0.40),
+    new THREE.Vector3(0, -2.95, -0.85),
+    new THREE.Vector3(0, -3.00, -1.35)
+  ];
+  const strapWidths = [1.5, 1.46, 1.38, 1.28];
+  addStrap(topPts, strapWidths);
+  addStrap(botPts, strapWidths);
+
+  /* ============================================================
+     日期 / 星期 / 副时区数字显示
+     ============================================================ */
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  const dateCv = document.createElement('canvas');
+  dateCv.width = 256; dateCv.height = 192;
+  const dateCtx = dateCv.getContext('2d');
+  const dateTex = new THREE.CanvasTexture(dateCv);
+  dateTex.colorSpace = THREE.SRGBColorSpace;
+  dateTex.anisotropy = 8;
+
+  const weekdayCv = document.createElement('canvas');
+  weekdayCv.width = 256; weekdayCv.height = 192;
+  const weekdayCtx = weekdayCv.getContext('2d');
+  const weekdayTex = new THREE.CanvasTexture(weekdayCv);
+  weekdayTex.colorSpace = THREE.SRGBColorSpace;
+  weekdayTex.anisotropy = 8;
+
+  const secCv = document.createElement('canvas');
+  secCv.width = 512; secCv.height = 96;
+  const secCtx = secCv.getContext('2d');
+  const secTex = new THREE.CanvasTexture(secCv);
+  secTex.colorSpace = THREE.SRGBColorSpace;
+  secTex.anisotropy = 8;
+
+  function drawDate(day) {
+    const ctx = dateCtx;
+    ctx.clearRect(0, 0, 256, 192);
+    ctx.fillStyle = '#efece2';
+    roundRect(ctx, 0, 0, 256, 192, 16);
+    ctx.fill();
+    ctx.fillStyle = '#12151c';
+    ctx.font = 'bold 120px "Helvetica Neue", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(day), 128, 102);
+    dateTex.needsUpdate = true;
+  }
+
+  function drawWeekday(wd) {
+    const ctx = weekdayCtx;
+    ctx.clearRect(0, 0, 256, 192);
+    ctx.fillStyle = '#efece2';
+    roundRect(ctx, 0, 0, 256, 192, 16);
+    ctx.fill();
+    ctx.fillStyle = '#12151c';
+    ctx.font = 'bold 78px "Helvetica Neue", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(wd.toUpperCase(), 128, 102);
+    weekdayTex.needsUpdate = true;
+  }
+
+  function drawSecondary(code, hh, mm) {
+    const ctx = secCtx;
+    ctx.clearRect(0, 0, 512, 96);
+    ctx.font = '600 52px "Helvetica Neue", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,150,80,0.95)';
+    ctx.fillText(`${code}  ${pad(hh)}:${pad(mm)}`, 256, 50);
+    secTex.needsUpdate = true;
+  }
+
+  const dateMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.42, 0.315),
+    new THREE.MeshBasicMaterial({ map: dateTex })
+  );
+  dateMesh.position.set(1.35, 0, 0.292);
+  watch.add(dateMesh);
+
+  const weekdayMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.42, 0.315),
+    new THREE.MeshBasicMaterial({ map: weekdayTex })
+  );
+  weekdayMesh.position.set(-1.35, 0, 0.292);
+  watch.add(weekdayMesh);
+
+  const secMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.95, 0.18),
+    new THREE.MeshBasicMaterial({ map: secTex, transparent: true, depthWrite: false })
+  );
+  secMesh.position.set(0, -1.58, 0.292);
+  watch.add(secMesh);
+
+  /* ============================================================
+     控制器 / 自适应取景
+     ============================================================ */
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.enablePan = false;
+  controls.minDistance = 6.5;
+  controls.maxDistance = 30;
+  controls.minPolarAngle = Math.PI * 0.3;
+  controls.maxPolarAngle = Math.PI * 0.7;
+  controls.minAzimuthAngle = -1.0;
+  controls.maxAzimuthAngle = 1.0;
+  controls.target.set(0, 0, 0);
+
+  function fitView() {
+    const aspect = window.innerWidth / window.innerHeight;
+    const vFov = THREE.MathUtils.degToRad(camera.fov);
+    const fitH = 6.9;
+    const fitW = 5.4;
+    const distV = (fitH / 2) / Math.tan(vFov / 2);
+    const distH = (fitW / 2) / (Math.tan(vFov / 2) * aspect);
+    const dist = Math.max(distV, distH);
+    camera.position.set(0, dist * 0.055, dist);
+    camera.lookAt(0, 0, 0);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  }
+  fitView();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    fitView();
+  });
+
+  /* ============================================================
+     UI
+     ============================================================ */
+  const tzASelect = document.getElementById('tzA');
+  const tzBSelect = document.getElementById('tzB');
+  const cardA = document.getElementById('cardA');
+  const cardB = document.getElementById('cardB');
+
+  function populateTimezones() {
+    let zones;
+    try {
+      zones = Intl.supportedValuesOf('timeZone');
+    } catch (e) {
+      zones = [
+        'UTC','Africa/Cairo','Africa/Johannesburg','America/Chicago','America/Denver',
+        'America/Los_Angeles','America/New_York','America/Sao_Paulo','Asia/Dubai',
+        'Asia/Hong_Kong','Asia/Kolkata','Asia/Shanghai','Asia/Singapore','Asia/Tokyo',
+        'Australia/Sydney','Europe/Berlin','Europe/London','Europe/Moscow','Europe/Paris',
+        'Pacific/Auckland'
+      ];
+    }
+    const set = new Set(zones);
+    set.add('UTC');
+    set.add(state.tzA);
+    set.add(state.tzB);
+    const arr = [...set].sort((a, b) => {
+      if (a === 'UTC') return -1;
+      if (b === 'UTC') return 1;
+      return a.localeCompare(b);
+    });
+    for (const sel of [tzASelect, tzBSelect]) {
+      for (const z of arr) {
+        const opt = document.createElement('option');
+        opt.value = z;
+        opt.textContent = z.replace(/_/g, ' ');
+        sel.appendChild(opt);
+      }
+    }
+    tzASelect.value = state.tzA;
+    tzBSelect.value = state.tzB;
+  }
+  populateTimezones();
+
+  function fillCard(el, p, tz) {
+    el.querySelector('.city').textContent = cityLabel(tz);
+    el.querySelector('.time').textContent = `${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
+    el.querySelector('.date').textContent =
+      `${p.year}-${pad(p.month)}-${pad(p.day)} ${WD_CN[p.weekday] || p.weekday}`;
+  }
+
+  /* ============================================================
+     动画状态
+     ============================================================ */
+  let lastDay = -1;
+  let lastWeekday = '';
+  let lastSecKey = '';
+  let lastUiTime = 0;
+  let firstFrame = true;
+
+  tzASelect.addEventListener('change', () => {
+    state.tzA = tzASelect.value;
+    lastDay = -1;
+    lastWeekday = '';
+    lastUiTime = 0;
+  });
+
+  tzBSelect.addEventListener('change', () => {
+    state.tzB = tzBSelect.value;
+    lastSecKey = '';
+    lastUiTime = 0;
+  });
+
+  /* ============================================================
+     每帧更新
+     ============================================================ */
+  function updateWatch(now, pA, pB) {
+    const ms = now.getMilliseconds();
+
+    // 主时区：平滑扫秒
+    const secA = pA.second + ms / 1000;
+    const minA = pA.minute + secA / 60;
+    const hrA = (pA.hour % 12) + minA / 60;
+
+    secondHand.rotation.z = -(secA / 60) * TAU;
+    minuteHand.rotation.z = -(minA / 60) * TAU;
+    hourHand.rotation.z = -(hrA / 12) * TAU;
+
+    // 副时区：24 小时小表盘
+    const secB = pB.second + ms / 1000;
+    const minB = pB.minute + secB / 60;
+    const hr24B = pB.hour + minB / 60;
+    subHand.rotation.z = -(hr24B / 24) * TAU;
+
+    // 日期 / 星期（仅在变化时重绘贴图）
+    if (pA.day !== lastDay || pA.weekday !== lastWeekday) {
+      lastDay = pA.day;
+      lastWeekday = pA.weekday;
+      drawDate(pA.day);
+      drawWeekday(pA.weekday);
+    }
+
+    // 副时区数字（仅在分钟变化时重绘）
+    const secKey = state.tzB + '|' + pB.hour + ':' + pB.minute;
+    if (secKey !== lastSecKey) {
+      lastSecKey = secKey;
+      drawSecondary(cityCode(state.tzB), pB.hour, pB.minute);
+    }
+  }
+
+  function updateUI(now, pA, pB) {
+    const t = now.getTime();
+    if (t - lastUiTime < 200) return;
+    lastUiTime = t;
+    fillCard(cardA, pA, state.tzA);
+    fillCard(cardB, pB, state.tzB);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const now = new Date();
+    const pA = getParts(now, state.tzA);
+    const pB = getParts(now, state.tzB);
+
+    updateWatch(now, pA, pB);
+    updateUI(now, pA, pB);
+
+    controls.update();
+    renderer.render(scene, camera);
+
+    if (firstFrame) {
+      firstFrame = false;
+      document.getElementById('loading').classList.add('hidden');
+      window.__watchReady = true;
+    }
+  }
+  animate();
+
+  // 加载失败提示
+  setTimeout(() => {
+    if (!window.__watchReady) {
+      const el = document.getElementById('loading');
+      if (el) el.textContent = '加载失败，请检查网络连接';
+    }
+  }, 10000);
+  </script>
+</body>
+</html>

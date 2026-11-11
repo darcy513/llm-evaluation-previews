@@ -1,0 +1,14 @@
+{
+  "campaign_id": "ernie-5.5-flash-preview-20261111",
+  "item_id": "coding-c05",
+  "model_alias": "ernie-5.5-flash-preview",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "1c700803dc17a082c2b8e65cc2da92661fd189ec7877de22a9ab846d1d93880a",
+  "source_answer_sha256": "389a764779f064b2ecd5ac754b09a98b1fcae35ac73972a6b9e4702497efbba5",
+  "external_urls": [
+    "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "https://unpkg.com/three@0.160.0/examples/jsm/"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}
