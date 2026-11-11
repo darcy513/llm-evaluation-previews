@@ -2,12 +2,13 @@
   "campaign_id": "ernie-5.5-flash-preview-20261111",
   "item_id": "coding-c04",
   "model_alias": "ernie-5.5-flash-preview",
-  "artifact_type": "html",
-  "artifact_file": "index.html",
-  "artifact_sha256": "399de65d687374a881c755270a1667643c2f74027f1408f7a269929ac318ba30",
+  "artifact_type": "svg",
+  "artifact_file": "answer.svg",
+  "artifact_sha256": "9c17908eea8e33840d7cc2d39cd6fb8b39a4a9543f5d9f0f139f737b4d3b3d05",
   "source_answer_sha256": "9f06834fe91399a30547ec7024ebe01378a5ef44024f553c11f2d017b077035e",
   "external_urls": [
     "http://www.w3.org/2000/svg"
   ],
-  "extraction_policy": "mechanical-only-no-code-repair"
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "extraction_note": "Re-extracted the ```svg block (lines 4-376) verbatim; the earlier extraction picked the trailing usage-example html snippet."
 }
