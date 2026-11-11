@@ -8,7 +8,7 @@
 <table><thead><tr><th>题目</th><th>模型</th><th>状态</th><th>预览</th></tr></thead><tbody>
 <tr><td><code>coding-c01</code></td><td><code>ernie-5.5-flash-preview</code></td><td>no-runnable-artifact-extracted</td><td>—</td></tr>
 <tr><td><code>coding-c02</code></td><td><code>ernie-5.5-flash-preview</code></td><td>published</td><td><a href="https://darcy513.github.io/llm-evaluation-previews/ernie-5.5-flash-preview-20261111/coding-c02/ernie-5.5-flash-preview/">打开</a></td></tr>
-<tr><td><code>coding-c03</code></td><td><code>ernie-5.5-flash-preview</code></td><td>model-request-failed</td><td>—</td></tr>
+<tr><td><code>coding-c03</code></td><td><code>ernie-5.5-flash-preview</code></td><td>published（补测）</td><td><a href="https://darcy513.github.io/llm-evaluation-previews/ernie-5.5-flash-preview-20261111/coding-c03/ernie-5.5-flash-preview/">打开</a></td></tr>
 <tr><td><code>coding-c04</code></td><td><code>ernie-5.5-flash-preview</code></td><td>published</td><td><a href="https://darcy513.github.io/llm-evaluation-previews/ernie-5.5-flash-preview-20261111/coding-c04/ernie-5.5-flash-preview/">打开</a></td></tr>
 <tr><td><code>coding-c05</code></td><td><code>ernie-5.5-flash-preview</code></td><td>published</td><td><a href="https://darcy513.github.io/llm-evaluation-previews/ernie-5.5-flash-preview-20261111/coding-c05/ernie-5.5-flash-preview/">打开</a></td></tr>
 <tr><td><code>coding-c06</code></td><td><code>ernie-5.5-flash-preview</code></td><td>published</td><td><a href="https://darcy513.github.io/llm-evaluation-previews/ernie-5.5-flash-preview-20261111/coding-c06/ernie-5.5-flash-preview/">打开</a></td></tr>
@@ -43,7 +43,8 @@
 <h2>说明</h2>
 <ul>
 <li>多模态 MM01–MM04 与推理 R02：模型仅支持文本输入（千帆 /v2/models: text-&gt;text），图片请求返回 HTTP 400，标记为不适用，不计能力失败。</li>
-<li>Coding C03、C08 与推理 R01：千帆单请求约 300 秒断流或思考耗尽 131072 token 上限，属技术失败，原始记录保留。</li>
+<li>Coding C08 与推理 R01：千帆单请求约 300 秒断流或思考耗尽 131072 token 上限，属技术失败；2026-11-11 晚补测各 3 路仍失败，原始记录保留。</li>
+<li>Coding C03：前 5 次尝试为技术失败，2026-11-11 晚补测（同题面、同参数）成功，预览为补测结果。</li>
 <li>Coding C01：模型声明无法联网检索小说后未交付代码，属未交付。</li>
 <li>本页为原始回答发布，评分草案待人工确认，未回填如流。</li>
 </ul>
