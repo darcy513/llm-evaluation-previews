@@ -20,5 +20,14 @@
     "reasoning-r01",
     "coding-c03",
     "coding-c08"
-  ]
+  ],
+  "agent": {
+    "status": "draft",
+    "formal_score_updated": false,
+    "valid_tasks": 8,
+    "technical_failures": 0,
+    "average_weighted_score": 89.375,
+    "strict_pass": 5,
+    "path": "agent/"
+  }
 }

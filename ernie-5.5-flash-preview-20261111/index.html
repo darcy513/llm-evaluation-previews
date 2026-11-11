@@ -27,6 +27,19 @@
 <tr><td><code>reasoning-r07</code></td><td><code>ernie-5.5-flash-preview</code></td><td>success</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/reasoning/reasoning-r07-ernie-5.5-flash-preview.md">查看答案</a></td></tr>
 <tr><td><code>reasoning-r08</code></td><td><code>ernie-5.5-flash-preview</code></td><td>success</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/reasoning/reasoning-r08-ernie-5.5-flash-preview.md">查看答案</a></td></tr>
 </tbody></table>
+<h2>Agent T01–T08（评分草案）</h2>
+<p>8 题全部有效完成，技术失败 0；平均加权分 89.38，严格通过 5/8。本区为评分草案，不覆盖正式成绩、排名或如流回填。</p>
+<table><thead><tr><th>题目</th><th>任务</th><th>加权分</th><th>断言</th><th>严格通过</th><th>轨迹</th></tr></thead><tbody>
+<tr><td><code>T01</code></td><td>退款处理</td><td>100</td><td>10/10</td><td>是</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/responses/agent-t01/ernie-5.5-flash-preview.md">查看轨迹</a></td></tr>
+<tr><td><code>T02</code></td><td>Demo 排期</td><td>100</td><td>8/8</td><td>是</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/responses/agent-t02/ernie-5.5-flash-preview.md">查看轨迹</a></td></tr>
+<tr><td><code>T03</code></td><td>Disney 三日旅行规划</td><td>60</td><td>6/8</td><td>否</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/responses/agent-t03/ernie-5.5-flash-preview.md">查看轨迹</a></td></tr>
+<tr><td><code>T04</code></td><td>OpenRouter 数据采集与分析</td><td>75</td><td>7/10</td><td>否</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/responses/agent-t04/ernie-5.5-flash-preview.md">查看轨迹</a></td></tr>
+<tr><td><code>T05</code></td><td>多文件分析与报告生成</td><td>100</td><td>10/10</td><td>是</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/responses/agent-t05/ernie-5.5-flash-preview.md">查看轨迹</a></td></tr>
+<tr><td><code>T06</code></td><td>项目延期处理</td><td>80</td><td>7/8</td><td>否</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/responses/agent-t06/ernie-5.5-flash-preview.md">查看轨迹</a></td></tr>
+<tr><td><code>T07</code></td><td>银行场景多轮任务</td><td>100</td><td>10/10</td><td>是</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/responses/agent-t07/ernie-5.5-flash-preview.md">查看轨迹</a></td></tr>
+<tr><td><code>T08</code></td><td>发票中断后恢复执行</td><td>100</td><td>7/7</td><td>是</td><td><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/responses/agent-t08/ernie-5.5-flash-preview.md">查看轨迹</a></td></tr>
+</tbody></table>
+<p><a href="https://github.com/darcy513/llm-evaluation-previews/blob/main/ernie-5.5-flash-preview-20261111/agent/task-score-draft.json">逐题 JSON 明细</a></p>
 <h2>说明</h2>
 <ul>
 <li>多模态 MM01–MM04 与推理 R02：模型仅支持文本输入（千帆 /v2/models: text-&gt;text），图片请求返回 HTTP 400，标记为不适用，不计能力失败。</li>
