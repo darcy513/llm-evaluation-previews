@@ -1,0 +1,13 @@
+{
+  "campaign_id": "deepseek-v4.1-flash-20261113",
+  "item_id": "coding-c06",
+  "model_alias": "deepseek-v4.1-flash",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "9ca07fcce6e2875e782edf585bf587684845f6280b304f24bfe520439214f5de",
+  "source_answer_sha256": "2361c585bd6ce9b5f1f65e0bcc0bd06503369a22eba5f53332c3d9dda7276a3d",
+  "source_run_id": "20261113T055610603572Z-04e24592",
+  "source_request_id": "6faee4b6367041df98cac1d64ef375c0",
+  "external_urls": [],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

@@ -1,0 +1,3339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>《极光》Aurora · 世代飞船交互模型</title>
+  <style>
+    :root {
+      --cyan: #69e4ff;
+      --cyan-soft: rgba(105, 228, 255, 0.32);
+      --line: rgba(105, 228, 255, 0.22);
+      --text: #e8f7ff;
+      --muted: #86a4b8;
+      --panel: rgba(3, 12, 24, 0.72);
+      --panel-strong: rgba(3, 12, 24, 0.9);
+      --green: #75ffb1;
+      --orange: #ffb06b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 42%, transparent 28%, rgba(0, 0, 0, 0.38) 72%, rgba(0, 0, 0, 0.88) 100%),
+        linear-gradient(180deg, rgba(1, 7, 18, 0.18), transparent 30%, rgba(0, 0, 0, 0.25));
+      mix-blend-mode: multiply;
+    }
+
+    .brand {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 10;
+      max-width: min(560px, calc(100vw - 390px));
+      pointer-events: none;
+      text-shadow: 0 0 24px rgba(0, 0, 0, 0.95);
+    }
+
+    .eyebrow {
+      margin-bottom: 8px;
+      color: var(--cyan);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      opacity: 0.82;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(26px, 3.6vw, 52px);
+      font-weight: 300;
+      letter-spacing: 0.03em;
+      line-height: 1.08;
+    }
+
+    .brand p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      line-height: 1.7;
+    }
+
+    .panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 20;
+      width: min(332px, calc(100vw - 40px));
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background:
+        linear-gradient(180deg, rgba(9, 30, 50, 0.76), rgba(2, 8, 18, 0.84)),
+        radial-gradient(circle at 0 0, rgba(105, 228, 255, 0.1), transparent 45%);
+      box-shadow:
+        0 28px 70px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      scrollbar-width: thin;
+      scrollbar-color: rgba(105, 228, 255, 0.4) transparent;
+    }
+
+    .panel::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .panel::-webkit-scrollbar-thumb {
+      background: rgba(105, 228, 255, 0.32);
+      border-radius: 10px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 18px var(--cyan), 0 0 40px rgba(105, 228, 255, 0.35);
+      animation: blink 2.4s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.45; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    button {
+      color: var(--text);
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+      transition: 0.22s ease;
+    }
+
+    .panel button {
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid rgba(105, 228, 255, 0.18);
+      border-radius: 12px;
+      background: rgba(7, 23, 39, 0.72);
+      color: #cfefff;
+      font-size: 12px;
+      letter-spacing: 0.03em;
+    }
+
+    .panel button:hover {
+      border-color: rgba(105, 228, 255, 0.46);
+      background: rgba(11, 43, 70, 0.8);
+      box-shadow: 0 0 22px rgba(105, 228, 255, 0.12);
+    }
+
+    .panel button.primary {
+      border-color: rgba(105, 228, 255, 0.38);
+      background: linear-gradient(135deg, rgba(18, 88, 124, 0.9), rgba(6, 30, 52, 0.92));
+    }
+
+    .panel button.active {
+      border-color: var(--cyan);
+      color: #fff;
+      box-shadow:
+        0 0 0 1px rgba(105, 228, 255, 0.16),
+        0 0 26px rgba(105, 228, 255, 0.18);
+    }
+
+    #btnReset {
+      grid-column: span 2;
+    }
+
+    .range-row,
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .range-row input[type="range"] {
+      flex: 1;
+      min-width: 0;
+      accent-color: var(--cyan);
+      cursor: pointer;
+    }
+
+    #speedLabel {
+      width: 42px;
+      text-align: right;
+      color: var(--cyan);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .check-row input {
+      accent-color: var(--cyan);
+    }
+
+    .divider {
+      height: 1px;
+      margin: 16px 0 14px;
+      background: linear-gradient(90deg, transparent, var(--line), transparent);
+    }
+
+    .section-wrap {
+      display: none;
+    }
+
+    .panel-title {
+      margin-bottom: 10px;
+      color: var(--cyan);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    .section-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .section-btn {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3px;
+      min-height: 46px !important;
+      padding: 9px 11px !important;
+      text-align: left;
+      border: 1px solid rgba(105, 228, 255, 0.12) !important;
+      border-radius: 11px !important;
+      background: rgba(5, 18, 32, 0.6) !important;
+    }
+
+    .section-btn span {
+      color: #dff8ff;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .section-btn small {
+      color: rgba(134, 164, 184, 0.76);
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .section-btn:hover,
+    .section-btn.active {
+      border-color: rgba(105, 228, 255, 0.45) !important;
+      background: rgba(12, 52, 82, 0.76) !important;
+    }
+
+    .section-btn.active span {
+      color: var(--cyan);
+    }
+
+    .hint {
+      margin-top: 14px;
+      color: rgba(134, 164, 184, 0.75);
+      font-size: 10px;
+      line-height: 1.7;
+      letter-spacing: 0.035em;
+    }
+
+    .info-card {
+      position: fixed;
+      left: 24px;
+      bottom: 24px;
+      z-index: 30;
+      width: min(430px, calc(100vw - 48px));
+      padding: 18px 20px;
+      border: 1px solid rgba(105, 228, 255, 0.2);
+      border-radius: 20px;
+      background:
+        linear-gradient(140deg, rgba(8, 28, 48, 0.88), rgba(2, 8, 18, 0.9)),
+        radial-gradient(circle at 20% 0%, rgba(105, 228, 255, 0.1), transparent 55%);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      transition: 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .info-card.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .info-kicker {
+      margin-bottom: 6px;
+      color: var(--cyan);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    .info-card h2 {
+      margin: 0 0 9px;
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: #b9d4e4;
+      font-size: 12px;
+      line-height: 1.85;
+    }
+
+    .info-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .info-meta span {
+      padding: 4px 7px;
+      border: 1px solid rgba(105, 228, 255, 0.16);
+      border-radius: 999px;
+      color: rgba(105, 228, 255, 0.82);
+      font-size: 8px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 26px;
+    }
+
+    .close:hover {
+      background: rgba(105, 228, 255, 0.12);
+      color: #fff;
+    }
+
+    #hotspots {
+      position: fixed;
+      inset: 0;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .hotspot {
+      position: absolute;
+      left: 0;
+      top: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 9px 6px 6px;
+      border: 1px solid rgba(105, 228, 255, 0.22);
+      border-radius: 999px;
+      background: rgba(2, 12, 24, 0.78);
+      color: #dff9ff;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: opacity 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      white-space: nowrap;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+    }
+
+    .hotspot.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .hotspot:hover,
+    .hotspot.active {
+      border-color: rgba(105, 228, 255, 0.66);
+      background: rgba(6, 34, 58, 0.92);
+      box-shadow: 0 0 28px rgba(105, 228, 255, 0.16);
+    }
+
+    .hotspot.active .name {
+      color: var(--cyan);
+    }
+
+    .hotspot .dot {
+      position: relative;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 16px var(--cyan);
+      flex: 0 0 auto;
+    }
+
+    .hotspot .dot::after {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border: 1px solid rgba(105, 228, 255, 0.38);
+      border-radius: 50%;
+      animation: ripple 2.2s ease-out infinite;
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(0.45); opacity: 0.9; }
+      80%, 100% { transform: scale(1.55); opacity: 0; }
+    }
+
+    .hotspot .name {
+      color: rgba(220, 248, 255, 0.9);
+      font-size: 10px;
+    }
+
+    .footer {
+      position: fixed;
+      left: 24px;
+      top: 50%;
+      z-index: 9;
+      transform: translateY(-50%) rotate(-90deg);
+      transform-origin: left center;
+      color: rgba(134, 164, 184, 0.32);
+      font-size: 9px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: radial-gradient(circle at 50% 50%, #06162a 0%, #010409 65%, #000 100%);
+      color: #d6f2ff;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+
+    #loading.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    #loading small {
+      max-width: 340px;
+      color: rgba(134, 164, 184, 0.7);
+      font-size: 10px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .loader {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 1px solid rgba(105, 228, 255, 0.15);
+      border-top-color: var(--cyan);
+      box-shadow: 0 0 30px rgba(105, 228, 255, 0.14);
+      animation: spin 1.3s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #fade {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+
+    #fade.show {
+      opacity: 1;
+    }
+
+    @media (max-width: 900px) {
+      .brand {
+        top: 16px;
+        left: 16px;
+        max-width: calc(100vw - 32px);
+      }
+
+      .brand p {
+        display: none;
+      }
+
+      .panel {
+        top: auto;
+        bottom: 16px;
+        right: 16px;
+        left: 16px;
+        width: auto;
+        max-height: 42vh;
+        border-radius: 18px;
+      }
+
+      .info-card {
+        left: 16px;
+        bottom: calc(42vh + 28px);
+        width: calc(100vw - 32px);
+        padding: 14px 16px;
+      }
+
+      .info-card h2 {
+        font-size: 17px;
+      }
+
+      .footer {
+        display: none;
+      }
+
+      .hotspot .name {
+        display: none;
+      }
+
+      .hotspot {
+        padding: 6px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+
+      #btnReset {
+        grid-column: span 1;
+      }
+
+      .panel {
+        max-height: 46vh;
+      }
+
+      .info-card {
+        bottom: calc(46vh + 28px);
+        max-height: 26vh;
+        overflow: auto;
+      }
+
+      .brand h1 {
+        font-size: 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+  <div id="vignette"></div>
+
+  <header class="brand">
+    <div class="eyebrow">INTERACTIVE STELLAR SHIP / TAU CETI MISSION</div>
+    <h1>《极光》 · 世代飞船</h1>
+    <p>“The Ship” / 生态闭环世代飞船 · 文本线索三维重建</p>
+  </header>
+
+  <aside class="panel" aria-label="飞船控制面板">
+    <div class="status-row">
+      <span class="status-dot"></span>
+      <span id="modeLabel">外部 · 深空航行</span>
+    </div>
+
+    <div class="button-row">
+      <button id="btnInterior" class="primary">进入飞船内部</button>
+      <button id="btnExterior">返回外部视角</button>
+      <button id="btnReset">重置视角</button>
+    </div>
+
+    <label class="range-row">
+      时间流速
+      <input id="speed" type="range" min="0.1" max="2" step="0.1" value="1" />
+      <span id="speedLabel">1.0×</span>
+    </label>
+
+    <label class="check-row">
+      <input id="chkHotspots" type="checkbox" checked />
+      显示内部热点
+    </label>
+
+    <div class="divider"></div>
+
+    <div id="sectionWrap" class="section-wrap">
+      <div class="panel-title">内部探索</div>
+      <div id="sectionList" class="section-list"></div>
+    </div>
+
+    <div class="hint">
+      拖拽 360° 环视 · 滚轮/双指缩放 · 进入内部后点击热点或舱段按钮
+    </div>
+  </aside>
+
+  <section id="infoCard" class="info-card">
+    <button id="closeInfo" class="close" aria-label="关闭">×</button>
+    <div id="infoKicker" class="info-kicker">内部舱段</div>
+    <h2 id="infoTitle"></h2>
+    <p id="infoDesc"></p>
+    <div id="infoMeta" class="info-meta"></div>
+  </section>
+
+  <div id="hotspots"></div>
+
+  <div class="footer">AURORA / THE SHIP · DRAG TO ORBIT · SCROLL TO ZOOM</div>
+
+  <div id="loading">
+    <div class="loader"></div>
+    <div>正在构建 The Ship ...</div>
+    <small>需要 WebGL；Three.js 从 CDN 加载。若长时间未加载，请使用本地 HTTP 服务并检查网络。</small>
+  </div>
+
+  <div id="fade"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+    import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+    import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+
+    const $ = (selector) => document.querySelector(selector);
+
+    // -------------------------------------------------------------------------
+    // Renderer, camera, controls
+    // -------------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x01030a);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      30000
+    );
+
+    const exteriorCamera = {
+      pos: new THREE.Vector3(320, 155, 372),
+      target: new THREE.Vector3(0, 0, 0)
+    };
+
+    const interiorCamera = {
+      pos: new THREE.Vector3(92, 68, 154),
+      target: new THREE.Vector3(0, 0, 28)
+    };
+
+    camera.position.copy(exteriorCamera.pos);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    $("#scene").appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.062;
+    controls.rotateSpeed = 0.66;
+    controls.zoomSpeed = 0.82;
+    controls.panSpeed = 0.55;
+    controls.enablePan = true;
+    controls.screenSpacePanning = true;
+    controls.minDistance = 35;
+    controls.maxDistance = 1000;
+    controls.minPolarAngle = 0.02;
+    controls.maxPolarAngle = Math.PI - 0.02;
+    controls.target.copy(exteriorCamera.target);
+    controls.update();
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.72,
+      0.48,
+      0.8
+    );
+    composer.addPass(bloomPass);
+
+    // -------------------------------------------------------------------------
+    // Lights
+    // -------------------------------------------------------------------------
+    scene.add(new THREE.AmbientLight(0x536d91, 0.58));
+
+    const sunLight = new THREE.DirectionalLight(0xbde8ff, 3.2);
+    sunLight.position.set(-560, 360, 620);
+    scene.add(sunLight);
+
+    const fillLight = new THREE.DirectionalLight(0x6f58ff, 1.1);
+    fillLight.position.set(380, -300, -520);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0x35cfff, 1.15);
+    rimLight.position.set(260, 420, -340);
+    scene.add(rimLight);
+
+    // -------------------------------------------------------------------------
+    // Procedural glow texture
+    // -------------------------------------------------------------------------
+    function createGlowTexture() {
+      const size = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const gradient = ctx.createRadialGradient(
+        size / 2,
+        size / 2,
+        0,
+        size / 2,
+        size / 2,
+        size / 2
+      );
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.16, "rgba(255,255,255,0.78)");
+      gradient.addColorStop(0.42, "rgba(255,255,255,0.2)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    const glowTexture = createGlowTexture();
+
+    function glowSprite(color, size, opacity = 0.8) {
+      const material = new THREE.SpriteMaterial({
+        map: glowTexture,
+        color,
+        transparent: true,
+        opacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(size, size, 1);
+      return sprite;
+    }
+
+    // -------------------------------------------------------------------------
+    // Deep space: stars, nebulae, planet, star streaks
+    // -------------------------------------------------------------------------
+    function createStars() {
+      const count = 5200;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const color = new THREE.Color();
+
+      for (let i = 0; i < count; i += 1) {
+        const radius = 2600 + Math.random() * 7400;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+
+        positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = radius * Math.cos(phi);
+        positions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+
+        const type = Math.random();
+        if (type < 0.64) {
+          color.setHSL(0.58, 0.32, 0.76 + Math.random() * 0.24);
+        } else if (type < 0.86) {
+          color.setHSL(0.115, 0.35, 0.72 + Math.random() * 0.24);
+        } else {
+          color.setHSL(0.0, 0.04, 0.92);
+        }
+
+        colors[i * 3] = color.r;
+        colors[i * 3 + 1] = color.g;
+        colors[i * 3 + 2] = color.b;
+      }
+
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+      const material = new THREE.PointsMaterial({
+        size: 2.25,
+        sizeAttenuation: true,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.94,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      const points = new THREE.Points(geometry, material);
+      scene.add(points);
+      return points;
+    }
+
+    const allStars = createStars();
+
+    function createNebulae() {
+      const configs = [
+        { position: [-2800, 960, -5200], color: 0x3e67ff, size: 5200, opacity: 0.09 },
+        { position: [3100, -1250, -6200], color: 0x7435ff, size: 6100, opacity: 0.075 },
+        { position: [-2100, -1800, 3600], color: 0x00b9ff, size: 5000, opacity: 0.045 },
+        { position: [1550, 2650, 2900], color: 0xff4fa8, size: 4100, opacity: 0.03 }
+      ];
+
+      for (const config of configs) {
+        const sprite = glowSprite(config.color, config.size, config.opacity);
+        sprite.position.set(...config.position);
+        scene.add(sprite);
+      }
+    }
+    createNebulae();
+
+    function createStarStreaks() {
+      const count = 460;
+      const positions = new Float32Array(count * 6);
+      const data = [];
+
+      for (let i = 0; i < count; i += 1) {
+        data.push({
+          x: THREE.MathUtils.randFloatSpread(2300),
+          y: THREE.MathUtils.randFloatSpread(1700),
+          z: THREE.MathUtils.randFloat(-1500, 950),
+          length: 10 + Math.random() * 62,
+          speed: 0.28 + Math.random() * 1.65
+        });
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+      const material = new THREE.LineBasicMaterial({
+        color: 0x98caff,
+        transparent: true,
+        opacity: 0.17,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const lines = new THREE.LineSegments(geometry, material);
+      lines.frustumCulled = false;
+      scene.add(lines);
+
+      function update(dt) {
+        const array = geometry.attributes.position.array;
+
+        for (let i = 0; i < count; i += 1) {
+          const item = data[i];
+          item.z -= dt * 105 * item.speed;
+
+          if (item.z < -1700) {
+            item.z = 1050 + Math.random() * 450;
+            item.x = THREE.MathUtils.randFloatSpread(2300);
+            item.y = THREE.MathUtils.randFloatSpread(1700);
+          }
+
+          const offset = i * 6;
+          array[offset] = item.x;
+          array[offset + 1] = item.y;
+          array[offset + 2] = item.z;
+          array[offset + 3] = item.x;
+          array[offset + 4] = item.y;
+          array[offset + 5] = item.z + item.length;
+        }
+
+        geometry.attributes.position.needsUpdate = true;
+      }
+
+      update(0);
+      return { lines, update };
+    }
+
+    const starStreak = createStarStreaks();
+
+    function createPlanetTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1024;
+      canvas.height = 512;
+      const ctx = canvas.getContext("2d");
+
+      const ocean = ctx.createLinearGradient(0, 0, 0, 512);
+      ocean.addColorStop(0, "#061525");
+      ocean.addColorStop(0.36, "#0b2e4e");
+      ocean.addColorStop(0.7, "#0d4773");
+      ocean.addColorStop(1, "#06111d");
+      ctx.fillStyle = ocean;
+      ctx.fillRect(0, 0, 1024, 512);
+
+      for (let i = 0; i < 90; i += 1) {
+        const x = Math.random() * 1024;
+        const y = 82 + Math.random() * 350;
+        const radius = 18 + Math.random() * 86;
+        const isGreen = Math.random() > 0.43;
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+
+        if (isGreen) {
+          gradient.addColorStop(0, "rgba(67,125,70,0.62)");
+          gradient.addColorStop(0.58, "rgba(41,85,48,0.44)");
+          gradient.addColorStop(1, "rgba(41,85,48,0)");
+        } else {
+          gradient.addColorStop(0, "rgba(123,104,67,0.6)");
+          gradient.addColorStop(0.58, "rgba(80,62,40,0.36)");
+          gradient.addColorStop(1, "rgba(80,62,40,0)");
+        }
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.ellipse(
+          x,
+          y,
+          radius,
+          radius * (0.48 + Math.random() * 0.74),
+          Math.random() * Math.PI,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+
+      ctx.globalCompositeOperation = "screen";
+      for (let i = 0; i < 74; i += 1) {
+        ctx.fillStyle = `rgba(255,255,255,${0.018 + Math.random() * 0.038})`;
+        ctx.beginPath();
+        ctx.ellipse(
+          Math.random() * 1024,
+          40 + Math.random() * 432,
+          34 + Math.random() * 145,
+          5 + Math.random() * 16,
+          Math.random() * 0.25 - 0.125,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+
+      ctx.globalCompositeOperation = "source-over";
+
+      const northCap = ctx.createLinearGradient(0, 0, 0, 82);
+      northCap.addColorStop(0, "rgba(234,252,255,0.96)");
+      northCap.addColorStop(1, "rgba(234,252,255,0)");
+      ctx.fillStyle = northCap;
+      ctx.fillRect(0, 0, 1024, 82);
+
+      const southCap = ctx.createLinearGradient(0, 512, 0, 430);
+      southCap.addColorStop(0, "rgba(234,252,255,0.96)");
+      southCap.addColorStop(1, "rgba(234,252,255,0)");
+      ctx.fillStyle = southCap;
+      ctx.fillRect(0, 430, 1024, 82);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      return texture;
+    }
+
+    const planetGroup = new THREE.Group();
+    planetGroup.position.set(-1080, -330, -2280);
+
+    const planet = new THREE.Mesh(
+      new THREE.SphereGeometry(300, 64, 64),
+      new THREE.MeshStandardMaterial({
+        map: createPlanetTexture(),
+        roughness: 0.94,
+        metalness: 0.02,
+        emissive: 0x061423,
+        emissiveIntensity: 0.76
+      })
+    );
+    planetGroup.add(planet);
+
+    const atmosphere = new THREE.Mesh(
+      new THREE.SphereGeometry(312, 64, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0x49cdff,
+        transparent: true,
+        opacity: 0.08,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    planetGroup.add(atmosphere);
+
+    const planetGlow = glowSprite(0x2ba7ff, 1240, 0.12);
+    planetGroup.add(planetGlow);
+    scene.add(planetGroup);
+
+    const destinationSun = glowSprite(0xffd7a3, 920, 0.76);
+    destinationSun.position.set(2500, 1300, -3650);
+    scene.add(destinationSun);
+
+    // -------------------------------------------------------------------------
+    // Ship materials
+    // -------------------------------------------------------------------------
+    const matHull = new THREE.MeshStandardMaterial({
+      color: 0x99adbb,
+      roughness: 0.3,
+      metalness: 0.92
+    });
+
+    const matDark = new THREE.MeshStandardMaterial({
+      color: 0x0c1822,
+      roughness: 0.48,
+      metalness: 0.82
+    });
+
+    const matTruss = new THREE.MeshStandardMaterial({
+      color: 0x2c4356,
+      roughness: 0.58,
+      metalness: 0.78
+    });
+
+    const matGlass = new THREE.MeshStandardMaterial({
+      color: 0x9befff,
+      transparent: true,
+      opacity: 0.13,
+      roughness: 0.1,
+      metalness: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+
+    const matGlassBio = new THREE.MeshStandardMaterial({
+      color: 0x8df7e5,
+      transparent: true,
+      opacity: 0.12,
+      roughness: 0.08,
+      metalness: 0.12,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+
+    const matWindow = new THREE.MeshBasicMaterial({
+      color: 0xbaf7ff
+    });
+
+    const matGlowCyan = new THREE.MeshBasicMaterial({
+      color: 0x67eaff,
+      transparent: true,
+      opacity: 0.88,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const matGlowGreen = new THREE.MeshBasicMaterial({
+      color: 0x84ffab,
+      transparent: true,
+      opacity: 0.82,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const matGlowOrange = new THREE.MeshBasicMaterial({
+      color: 0xff9c58,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const matRadiator = new THREE.MeshStandardMaterial({
+      color: 0x19252f,
+      roughness: 0.45,
+      metalness: 0.82,
+      emissive: 0x3b0800,
+      emissiveIntensity: 0.38,
+      side: THREE.DoubleSide
+    });
+
+    // -------------------------------------------------------------------------
+    // Ship root groups and animation registry
+    // -------------------------------------------------------------------------
+    const shipRoot = new THREE.Group();
+    scene.add(shipRoot);
+
+    const exterior = new THREE.Group();
+    const interior = new THREE.Group();
+    interior.visible = false;
+
+    shipRoot.add(exterior);
+    shipRoot.add(interior);
+
+    const animated = {
+      rings: [],
+      plumes: [],
+      beacons: [],
+      sail: null,
+      interior: {}
+    };
+
+    // -------------------------------------------------------------------------
+    // Geometry helpers
+    // -------------------------------------------------------------------------
+    const Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+    function tubeBetween(start, end, radius, material, radialSegments = 8) {
+      const a = start.clone();
+      const b = end.clone();
+      const direction = new THREE.Vector3().subVectors(b, a);
+      const length = direction.length();
+
+      const geometry = new THREE.CylinderGeometry(
+        radius,
+        radius,
+        length,
+        radialSegments,
+        1,
+        false
+      );
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.copy(a).add(b).multiplyScalar(0.5);
+      mesh.quaternion.setFromUnitVectors(Y_AXIS, direction.normalize());
+      return mesh;
+    }
+
+    function makeCircleLine(radius, material, segments = 128) {
+      const points = [];
+      for (let i = 0; i < segments; i += 1) {
+        const angle = (i / segments) * Math.PI * 2;
+        points.push(
+          new THREE.Vector3(
+            Math.cos(angle) * radius,
+            Math.sin(angle) * radius,
+            0
+          )
+        );
+      }
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      return new THREE.LineLoop(geometry, material);
+    }
+
+    function addBeacon(position, color = 0xff6b6b) {
+      const material = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(1.15, 12, 10),
+        material
+      );
+
+      mesh.position.copy(position);
+      exterior.add(mesh);
+
+      animated.beacons.push({
+        mesh,
+        material,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Exterior ship construction
+    // -------------------------------------------------------------------------
+    function createBiomeModule(z, radius, length, color) {
+      const group = new THREE.Group();
+      group.position.z = z;
+
+      const membrane = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, length, 48, 1, true),
+        matGlassBio
+      );
+      membrane.rotation.x = Math.PI / 2;
+      group.add(membrane);
+
+      const landMaterial = new THREE.MeshStandardMaterial({
+        color,
+        emissive: 0x092317,
+        emissiveIntensity: 0.55,
+        roughness: 0.9,
+        metalness: 0.04,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.47
+      });
+
+      const interiorLand = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          radius * 0.87,
+          radius * 0.87,
+          length * 0.92,
+          48,
+          1,
+          true
+        ),
+        landMaterial
+      );
+      interiorLand.rotation.x = Math.PI / 2;
+      group.add(interiorLand);
+
+      for (const sign of [-1, 1]) {
+        const cap = new THREE.Mesh(
+          new THREE.CylinderGeometry(radius, radius, 3.2, 48),
+          matHull
+        );
+        cap.rotation.x = Math.PI / 2;
+        cap.position.z = sign * length * 0.5;
+        group.add(cap);
+
+        const rim = new THREE.Mesh(
+          new THREE.TorusGeometry(radius + 0.7, 1.25, 8, 64),
+          matTruss
+        );
+        rim.position.z = sign * length * 0.5;
+        group.add(rim);
+      }
+
+      for (let i = -2; i <= 2; i += 1) {
+        const rib = new THREE.Mesh(
+          new THREE.TorusGeometry(radius + 0.8, 0.55, 6, 64),
+          matTruss
+        );
+        rib.position.z = (i / 5) * length;
+        group.add(rib);
+      }
+
+      const leafMaterial = new THREE.MeshStandardMaterial({
+        color: 0x33bd68,
+        roughness: 0.92,
+        metalness: 0,
+        emissive: 0x092b17,
+        emissiveIntensity: 0.58
+      });
+
+      for (let i = 0; i < 118; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const localZ = (Math.random() - 0.5) * length * 0.82;
+        const radial = radius * (0.65 + Math.random() * 0.2);
+        const size = 0.7 + Math.random() * 2.3;
+
+        const leaf = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(size, 0),
+          leafMaterial
+        );
+
+        leaf.position.set(
+          Math.cos(angle) * radial,
+          Math.sin(angle) * radial,
+          localZ
+        );
+        leaf.rotation.set(
+          Math.random() * Math.PI,
+          Math.random() * Math.PI,
+          Math.random() * Math.PI
+        );
+        group.add(leaf);
+      }
+
+      for (const angle of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+        const strip = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.22, 0.22, length * 0.9, 6),
+          matGlowGreen
+        );
+        strip.rotation.x = Math.PI / 2;
+        strip.position.set(
+          Math.cos(angle) * (radius + 0.8),
+          Math.sin(angle) * (radius + 0.8),
+          0
+        );
+        group.add(strip);
+      }
+
+      exterior.add(group);
+      return group;
+    }
+
+    function createHabitatRing(radius, tube, z, direction) {
+      const base = new THREE.Group();
+      base.position.z = z;
+
+      const spin = new THREE.Group();
+      base.add(spin);
+
+      const outerRing = new THREE.Mesh(
+        new THREE.TorusGeometry(radius, tube, 18, 160),
+        matHull
+      );
+      spin.add(outerRing);
+
+      const landMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2e9b69,
+        emissive: 0x0a3c26,
+        emissiveIntensity: 0.8,
+        roughness: 0.92,
+        metalness: 0.03,
+        transparent: true,
+        opacity: 0.82
+      });
+
+      const landRing = new THREE.Mesh(
+        new THREE.TorusGeometry(radius - tube * 0.58, tube * 0.62, 12, 160),
+        landMaterial
+      );
+      spin.add(landRing);
+
+      const innerTrim = new THREE.Mesh(
+        new THREE.TorusGeometry(radius - tube, 0.8, 8, 160),
+        matTruss
+      );
+      spin.add(innerTrim);
+
+      for (let i = 0; i < 104; i += 1) {
+        const angle = (i / 104) * Math.PI * 2;
+        const windowMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1.0, 2.6, 1.0),
+          matWindow
+        );
+        windowMesh.position.set(
+          Math.cos(angle) * (radius + tube * 0.85),
+          Math.sin(angle) * (radius + tube * 0.85),
+          0
+        );
+        windowMesh.rotation.z = angle;
+        spin.add(windowMesh);
+      }
+
+      for (let i = 0; i < 6; i += 1) {
+        const angle = (i / 6) * Math.PI * 2;
+        const start = new THREE.Vector3(
+          Math.cos(angle) * 30,
+          Math.sin(angle) * 30,
+          0
+        );
+        const end = new THREE.Vector3(
+          Math.cos(angle) * (radius - tube),
+          Math.sin(angle) * (radius - tube),
+          0
+        );
+        spin.add(tubeBetween(start, end, 1.0, matTruss, 6));
+      }
+
+      const hub = new THREE.Mesh(
+        new THREE.TorusGeometry(30, 2.4, 10, 64),
+        matHull
+      );
+      spin.add(hub);
+
+      for (let i = 0; i < 10; i += 1) {
+        const angle = (i / 10) * Math.PI * 2 + 0.15;
+        const pod = new THREE.Mesh(
+          new THREE.BoxGeometry(5.0, 7.0, 10.0),
+          matHull
+        );
+        pod.position.set(
+          Math.cos(angle) * (radius + tube + 4.0),
+          Math.sin(angle) * (radius + tube + 4.0),
+          0
+        );
+        pod.rotation.z = angle;
+        spin.add(pod);
+
+        const podLight = new THREE.Mesh(
+          new THREE.BoxGeometry(1.5, 1.0, 1.8),
+          matGlowCyan
+        );
+        podLight.position.set(
+          pod.position.x,
+          pod.position.y,
+          5.3
+        );
+        podLight.rotation.z = angle;
+        spin.add(podLight);
+      }
+
+      const accentMaterial = new THREE.LineBasicMaterial({
+        color: 0x5de6ff,
+        transparent: true,
+        opacity: 0.32,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      for (const lineRadius of [radius - tube * 0.72, radius + tube * 0.72]) {
+        spin.add(makeCircleLine(lineRadius, accentMaterial, 160));
+      }
+
+      base.userData = {
+        spin,
+        direction
+      };
+
+      exterior.add(base);
+      animated.rings.push(base);
+
+      addBeacon(
+        new THREE.Vector3(
+          Math.cos(0.4) * (radius + tube + 6),
+          Math.sin(0.4) * (radius + tube + 6),
+          z
+        ),
+        0xff956d
+      );
+
+      return base;
+    }
+
+    function createEngine(x, y, phase, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, -174);
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          6.2 * scale,
+          9.0 * scale,
+          55 * scale,
+          24
+        ),
+        matDark
+      );
+      body.rotation.x = Math.PI / 2;
+      group.add(body);
+
+      const nozzle = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          7.4 * scale,
+          14.0 * scale,
+          20 * scale,
+          24,
+          1,
+          true
+        ),
+        matHull
+      );
+      nozzle.rotation.x = Math.PI / 2;
+      nozzle.position.z = -36 * scale;
+      group.add(nozzle);
+
+      const nozzleRing = new THREE.Mesh(
+        new THREE.TorusGeometry(10.0 * scale, 0.8 * scale, 8, 40),
+        matGlowCyan
+      );
+      nozzleRing.position.z = -44 * scale;
+      group.add(nozzleRing);
+
+      const plumeMaterial = new THREE.MeshBasicMaterial({
+        color: 0x3bcbff,
+        transparent: true,
+        opacity: 0.16,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+
+      const plume = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          1.7 * scale,
+          13.5 * scale,
+          105 * scale,
+          24,
+          1,
+          true
+        ),
+        plumeMaterial
+      );
+      plume.rotation.x = Math.PI / 2;
+      plume.position.z = -98 * scale;
+      group.add(plume);
+
+      const coreMaterial = new THREE.MeshBasicMaterial({
+        color: 0xc8f8ff,
+        transparent: true,
+        opacity: 0.46,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const core = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          0.75 * scale,
+          3.8 * scale,
+          105 * scale,
+          16,
+          1,
+          true
+        ),
+        coreMaterial
+      );
+      core.rotation.x = Math.PI / 2;
+      core.position.z = -95 * scale;
+      group.add(core);
+
+      const exhaustGlow = glowSprite(0x4ce8ff, 44 * scale, 0.92);
+      exhaustGlow.position.z = -46 * scale;
+      group.add(exhaustGlow);
+
+      const light = new THREE.PointLight(0x3fd4ff, 11, 190, 2);
+      light.position.z = -60 * scale;
+      group.add(light);
+
+      animated.plumes.push({
+        plume,
+        core,
+        glow: exhaustGlow,
+        light,
+        phase,
+        baseOpacity: 0.16
+      });
+
+      exterior.add(group);
+      return group;
+    }
+
+    function buildExterior() {
+      // Main axial spine
+      const spine = new THREE.Mesh(
+        new THREE.CylinderGeometry(7, 7, 340, 32),
+        matHull
+      );
+      spine.rotation.x = Math.PI / 2;
+      exterior.add(spine);
+
+      // Spine collars
+      for (let z = -160; z <= 172; z += 20) {
+        const collar = new THREE.Mesh(
+          new THREE.TorusGeometry(12, 0.8, 8, 48),
+          matTruss
+        );
+        collar.position.z = z;
+        exterior.add(collar);
+      }
+
+      // Long truss frame
+      for (let i = 0; i < 8; i += 1) {
+        const angle = (i / 8) * Math.PI * 2;
+        const x = Math.cos(angle) * 28;
+        const y = Math.sin(angle) * 28;
+
+        exterior.add(
+          tubeBetween(
+            new THREE.Vector3(x, y, -168),
+            new THREE.Vector3(x, y, 178),
+            0.55,
+            matTruss,
+            6
+          )
+        );
+      }
+
+      for (let z = -160; z <= 160; z += 40) {
+        const hoop = new THREE.Mesh(
+          new THREE.TorusGeometry(28, 0.6, 6, 80),
+          matTruss
+        );
+        hoop.position.z = z;
+        exterior.add(hoop);
+      }
+
+      // Bow command module
+      const commandModule = new THREE.Mesh(
+        new THREE.CylinderGeometry(18, 18, 42, 32),
+        matHull
+      );
+      commandModule.rotation.x = Math.PI / 2;
+      commandModule.position.z = 188;
+      exterior.add(commandModule);
+
+      const commandCollar = new THREE.Mesh(
+        new THREE.TorusGeometry(18.4, 1.2, 8, 64),
+        matTruss
+      );
+      commandCollar.position.z = 188;
+      exterior.add(commandCollar);
+
+      const nose = new THREE.Mesh(
+        new THREE.ConeGeometry(18, 30, 32),
+        matHull
+      );
+      nose.rotation.x = Math.PI / 2;
+      nose.position.z = 224;
+      exterior.add(nose);
+
+      for (let i = 0; i < 24; i += 1) {
+        const angle = (i / 24) * Math.PI * 2;
+        const windowMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1.8, 3.4, 1.2),
+          matWindow
+        );
+        windowMesh.position.set(
+          Math.cos(angle) * 18.25,
+          Math.sin(angle) * 18.25,
+          202
+        );
+        windowMesh.rotation.z = angle;
+        exterior.add(windowMesh);
+      }
+
+      // Bow mast and gossamer magsail / braking structure
+      exterior.add(
+        tubeBetween(
+          new THREE.Vector3(0, 0, 218),
+          new THREE.Vector3(0, 0, 249),
+          1.0,
+          matTruss,
+          8
+        )
+      );
+
+      const sail = new THREE.Group();
+      sail.position.z = 250;
+      exterior.add(sail);
+      animated.sail = sail;
+
+      const sailSkin = new THREE.Mesh(
+        new THREE.RingGeometry(30, 150, 128, 1),
+        new THREE.MeshBasicMaterial({
+          color: 0x30c9ff,
+          transparent: true,
+          opacity: 0.018,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      sail.add(sailSkin);
+
+      const sailLineMaterial = new THREE.LineBasicMaterial({
+        color: 0x79e6ff,
+        transparent: true,
+        opacity: 0.23,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      for (const radius of [46, 94, 148]) {
+        sail.add(makeCircleLine(radius, sailLineMaterial, 128));
+      }
+
+      for (let i = 0; i < 36; i += 1) {
+        const angle = (i / 36) * Math.PI * 2;
+        const points = [
+          new THREE.Vector3(
+            Math.cos(angle) * 18,
+            Math.sin(angle) * 18,
+            0
+          ),
+          new THREE.Vector3(
+            Math.cos(angle) * 150,
+            Math.sin(angle) * 150,
+            0
+          )
+        ];
+
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(geometry, sailLineMaterial);
+        sail.add(line);
+
+        const node = new THREE.Mesh(
+          new THREE.SphereGeometry(0.9, 8, 8),
+          matWindow
+        );
+        node.position.set(
+          Math.cos(angle) * 149,
+          Math.sin(angle) * 149,
+          0
+        );
+        sail.add(node);
+      }
+
+      const sailHub = new THREE.Mesh(
+        new THREE.SphereGeometry(4.4, 16, 12),
+        matHull
+      );
+      sail.add(sailHub);
+
+      // Large ecological biome modules
+      createBiomeModule(122, 42, 84, 0x30b86b);
+      createBiomeModule(-108, 44, 78, 0x55aa50);
+
+      // Rotating habitat rings
+      createHabitatRing(82, 8.0, 25, 1);
+      createHabitatRing(94, 9.0, -48, -1);
+
+      // Thermal radiators
+      for (let i = 0; i < 4; i += 1) {
+        const holder = new THREE.Group();
+        holder.position.z = -145;
+        holder.rotation.z = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        exterior.add(holder);
+
+        const panel = new THREE.Mesh(
+          new THREE.BoxGeometry(106, 1.2, 64),
+          matRadiator
+        );
+        panel.position.x = 72;
+        holder.add(panel);
+
+        const edgeA = new THREE.Mesh(
+          new THREE.BoxGeometry(106, 0.34, 1.4),
+          matGlowOrange
+        );
+        edgeA.position.set(72, 0, 32);
+        holder.add(edgeA);
+
+        const edgeB = edgeA.clone();
+        edgeB.position.z = -32;
+        holder.add(edgeB);
+      }
+
+      // Engine brackets
+      const engineRing = new THREE.Mesh(
+        new THREE.TorusGeometry(31, 3, 10, 80),
+        matTruss
+      );
+      engineRing.position.z = -176;
+      exterior.add(engineRing);
+
+      for (let i = 0; i < 4; i += 1) {
+        const angle = (i / 4) * Math.PI * 2;
+        exterior.add(
+          tubeBetween(
+            new THREE.Vector3(0, 0, -168),
+            new THREE.Vector3(
+              Math.cos(angle) * 30,
+              Math.sin(angle) * 30,
+              -168
+            ),
+            1.1,
+            matTruss,
+            8
+          )
+        );
+      }
+
+      // Main central engine plus four outboard engines
+      createEngine(0, 0, 0.0, 1.32);
+
+      for (let i = 0; i < 4; i += 1) {
+        const angle = (i / 4) * Math.PI * 2;
+        createEngine(
+          Math.cos(angle) * 30,
+          Math.sin(angle) * 30,
+          i * 0.73 + 0.8,
+          0.65
+        );
+      }
+
+      // Hull running lights
+      for (let z = -150; z <= 190; z += 12) {
+        const upperLight = new THREE.Mesh(
+          new THREE.SphereGeometry(0.52, 8, 8),
+          matWindow
+        );
+        upperLight.position.set(0, 12, z);
+        exterior.add(upperLight);
+
+        const lowerLight = upperLight.clone();
+        lowerLight.position.y = -12;
+        exterior.add(lowerLight);
+      }
+
+      // Navigation beacons
+      addBeacon(new THREE.Vector3(0, 0, 249), 0x75f4ff);
+      addBeacon(new THREE.Vector3(120, 58, 25), 0xffa06b);
+      addBeacon(new THREE.Vector3(-128, -44, -48), 0x8cff9a);
+      addBeacon(new THREE.Vector3(0, 106, -48), 0xff8a5c);
+      addBeacon(new THREE.Vector3(0, -22, -176), 0x72e5ff);
+    }
+
+    // -------------------------------------------------------------------------
+    // Interior construction
+    // -------------------------------------------------------------------------
+    const intMetal = new THREE.MeshStandardMaterial({
+      color: 0x60798c,
+      metalness: 0.72,
+      roughness: 0.34
+    });
+
+    const intDark = new THREE.MeshStandardMaterial({
+      color: 0x0c1822,
+      metalness: 0.58,
+      roughness: 0.66
+    });
+
+    const intGlass = new THREE.MeshBasicMaterial({
+      color: 0x5bdeff,
+      transparent: true,
+      opacity: 0.1,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const intGlassGreen = new THREE.MeshBasicMaterial({
+      color: 0x64ff93,
+      transparent: true,
+      opacity: 0.12,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const intGlowCyan = new THREE.MeshBasicMaterial({
+      color: 0x6bf3ff,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const intGlowGreen = new THREE.MeshBasicMaterial({
+      color: 0x6aff9a,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const intGlowOrange = new THREE.MeshBasicMaterial({
+      color: 0xffa55b,
+      transparent: true,
+      opacity: 0.84,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    function buildBridge() {
+      const group = new THREE.Group();
+      group.position.z = 150;
+
+      const deck = new THREE.Mesh(
+        new THREE.CylinderGeometry(24, 26, 3, 48),
+        intDark
+      );
+      deck.position.y = -2;
+      group.add(deck);
+
+      const platform = new THREE.Mesh(
+        new THREE.CylinderGeometry(10, 12, 2, 32),
+        intMetal
+      );
+      platform.position.y = 0;
+      group.add(platform);
+
+      const dome = new THREE.Mesh(
+        new THREE.SphereGeometry(
+          26,
+          32,
+          16,
+          0,
+          Math.PI * 2,
+          0,
+          Math.PI / 2
+        ),
+        intGlass
+      );
+      group.add(dome);
+
+      const table = new THREE.Mesh(
+        new THREE.CylinderGeometry(7, 8, 1.5, 32),
+        intMetal
+      );
+      table.position.y = 2;
+      group.add(table);
+
+      const holo = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(3.6, 1),
+        new THREE.MeshBasicMaterial({
+          color: 0x67f4ff,
+          transparent: true,
+          opacity: 0.78,
+          blending: THREE.AdditiveBlending,
+          wireframe: true
+        })
+      );
+      holo.position.y = 9;
+      group.add(holo);
+
+      const holoRing = new THREE.Mesh(
+        new THREE.TorusGeometry(5.2, 0.2, 8, 64),
+        intGlowCyan
+      );
+      holoRing.rotation.x = Math.PI / 2;
+      holoRing.position.y = 9;
+      group.add(holoRing);
+
+      for (let i = 0; i < 10; i += 1) {
+        const angle = (i / 10) * Math.PI * 2;
+        const seat = new THREE.Group();
+        seat.position.set(
+          Math.cos(angle) * 15,
+          0.8,
+          Math.sin(angle) * 15
+        );
+        seat.lookAt(new THREE.Vector3(0, 0.8, 0));
+
+        const base = new THREE.Mesh(
+          new THREE.BoxGeometry(2.0, 1.2, 2.4),
+          intDark
+        );
+        seat.add(base);
+
+        const back = new THREE.Mesh(
+          new THREE.BoxGeometry(2.0, 2.4, 0.5),
+          intMetal
+        );
+        back.position.set(0, 1.0, -1.0);
+        seat.add(back);
+
+        const screen = new THREE.Mesh(
+          new THREE.BoxGeometry(2.4, 0.16, 0.08),
+          intGlowCyan
+        );
+        screen.position.set(0, 0.5, 1.35);
+        seat.add(screen);
+
+        group.add(seat);
+      }
+
+      for (let i = 0; i < 16; i += 1) {
+        const angle = (i / 16) * Math.PI * 2;
+        const consoleGroup = new THREE.Group();
+        consoleGroup.position.set(
+          Math.cos(angle) * 21,
+          0.3,
+          Math.sin(angle) * 21
+        );
+        consoleGroup.lookAt(new THREE.Vector3(0, 0.3, 0));
+
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(4.0, 0.8, 1.4),
+          intMetal
+        );
+        consoleGroup.add(body);
+
+        const screen = new THREE.Mesh(
+          new THREE.BoxGeometry(3.2, 0.12, 0.7),
+          intGlowCyan
+        );
+        screen.position.y = 0.55;
+        consoleGroup.add(screen);
+
+        group.add(consoleGroup);
+      }
+
+      for (let i = 0; i < 24; i += 1) {
+        const angle = (i / 24) * Math.PI * 2;
+        const windowMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1.2, 2.0, 0.5),
+          intGlowCyan
+        );
+        windowMesh.position.set(
+          Math.cos(angle) * 25.5,
+          3,
+          Math.sin(angle) * 25.5
+        );
+        windowMesh.lookAt(new THREE.Vector3(0, 3, 0));
+        group.add(windowMesh);
+      }
+
+      interior.add(group);
+      return { group, holo, holoRing };
+    }
+
+    function buildAICore() {
+      const group = new THREE.Group();
+      group.position.z = 110;
+
+      const coreMaterial = new THREE.MeshStandardMaterial({
+        color: 0xaafaff,
+        emissive: 0x44dfff,
+        emissiveIntensity: 2.2,
+        roughness: 0.12,
+        metalness: 0.52
+      });
+
+      const core = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(6, 1),
+        coreMaterial
+      );
+      group.add(core);
+
+      const cage = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(14, 1),
+        new THREE.MeshBasicMaterial({
+          color: 0x60e8ff,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.45,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      group.add(cage);
+
+      const rings = [];
+      for (let i = 0; i < 3; i += 1) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(16 + i * 2.5, 0.18, 6, 96),
+          intGlowCyan
+        );
+        ring.rotation.set(
+          Math.random() * Math.PI,
+          Math.random() * Math.PI,
+          0
+        );
+        group.add(ring);
+        rings.push(ring);
+      }
+
+      const pedestal = new THREE.Mesh(
+        new THREE.CylinderGeometry(3, 8, 12, 24),
+        intMetal
+      );
+      pedestal.position.y = -18;
+      group.add(pedestal);
+
+      const light = new THREE.PointLight(0x54e8ff, 20, 130, 2);
+      light.position.y = 2;
+      group.add(light);
+
+      interior.add(group);
+      return { group, core, cage, rings, light };
+    }
+
+    function buildInteriorBiome() {
+      const group = new THREE.Group();
+      group.position.set(0, -8, 70);
+
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(32, 33, 3, 64),
+        intDark
+      );
+      base.position.y = -1;
+      group.add(base);
+
+      const dome = new THREE.Mesh(
+        new THREE.SphereGeometry(
+          31,
+          32,
+          18,
+          0,
+          Math.PI * 2,
+          0,
+          Math.PI / 2
+        ),
+        intGlassGreen
+      );
+      group.add(dome);
+
+      const groundMaterial = new THREE.MeshStandardMaterial({
+        color: 0x155f37,
+        emissive: 0x062a16,
+        emissiveIntensity: 0.82,
+        roughness: 1,
+        metalness: 0
+      });
+
+      const ground = new THREE.Mesh(
+        new THREE.CircleGeometry(30, 64),
+        groundMaterial
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = 0.25;
+      group.add(ground);
+
+      const waterMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1f8cb9,
+        emissive: 0x06354a,
+        emissiveIntensity: 0.8,
+        roughness: 0.24,
+        metalness: 0.1
+      });
+
+      const lake = new THREE.Mesh(
+        new THREE.CircleGeometry(7, 40),
+        waterMaterial
+      );
+      lake.rotation.x = -Math.PI / 2;
+      lake.position.set(-8, 0.36, 5);
+      group.add(lake);
+
+      const trunkMaterial = new THREE.MeshStandardMaterial({
+        color: 0x52301c,
+        roughness: 0.92,
+        metalness: 0
+      });
+
+      const crownMaterial = new THREE.MeshStandardMaterial({
+        color: 0x28b968,
+        emissive: 0x052415,
+        emissiveIntensity: 0.42,
+        roughness: 0.82,
+        metalness: 0
+      });
+
+      for (let i = 0; i < 86; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const radial = 8 + Math.random() * 20;
+        const x = Math.cos(angle) * radial;
+        const z = Math.sin(angle) * radial;
+
+        if (Math.hypot(x + 8, z - 5) < 8.2) {
+          continue;
+        }
+
+        const trunkHeight = 1.8 + Math.random() * 2.2;
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.18, 0.26, trunkHeight, 6),
+          trunkMaterial
+        );
+        trunk.position.set(x, trunkHeight * 0.5 + 0.3, z);
+        group.add(trunk);
+
+        const crown = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(1 + Math.random() * 1.3, 0),
+          crownMaterial
+        );
+        crown.position.set(
+          x,
+          trunkHeight + 0.9 + Math.random() * 0.8,
+          z
+        );
+        group.add(crown);
+      }
+
+      const halo = new THREE.Mesh(
+        new THREE.TorusGeometry(27, 0.25, 6, 96),
+        intGlowGreen
+      );
+      halo.rotation.x = Math.PI / 2;
+      halo.position.y = 26;
+      group.add(halo);
+
+      const light = new THREE.PointLight(0x75ff9d, 18, 110, 2);
+      light.position.y = 20;
+      group.add(light);
+
+      interior.add(group);
+      return { group, halo, light };
+    }
+
+    function buildInteriorHabitat() {
+      const group = new THREE.Group();
+      group.position.z = 28;
+
+      const ring = new THREE.Group();
+      group.add(ring);
+
+      const outer = new THREE.Mesh(
+        new THREE.TorusGeometry(62, 4.5, 12, 160),
+        intMetal
+      );
+      ring.add(outer);
+
+      const landMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1f7f55,
+        emissive: 0x062e1e,
+        emissiveIntensity: 0.82,
+        roughness: 0.82,
+        metalness: 0,
+        transparent: true,
+        opacity: 0.9
+      });
+
+      const land = new THREE.Mesh(
+        new THREE.TorusGeometry(57, 3.8, 12, 160),
+        landMaterial
+      );
+      ring.add(land);
+
+      for (let i = 0; i < 72; i += 1) {
+        const angle = (i / 72) * Math.PI * 2;
+        const house = new THREE.Group();
+        house.position.set(
+          Math.cos(angle) * 64,
+          Math.sin(angle) * 64,
+          0
+        );
+        house.rotation.z = angle;
+
+        const block = new THREE.Mesh(
+          new THREE.BoxGeometry(4.5, 3.0, 3.2 + Math.random() * 3.0),
+          intDark
+        );
+        house.add(block);
+
+        const windowMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(2.6, 0.6, 0.15),
+          matWindow
+        );
+        windowMesh.position.set(0, 0, 1.8);
+        house.add(windowMesh);
+
+        if (i % 3 === 0) {
+          const park = new THREE.Mesh(
+            new THREE.SphereGeometry(1.2, 8, 6),
+            new THREE.MeshStandardMaterial({
+              color: 0x2fbf6b,
+              roughness: 0.9,
+              metalness: 0
+            })
+          );
+          park.position.set(0, 0, 2.8);
+          house.add(park);
+        }
+
+        ring.add(house);
+      }
+
+      for (let i = 0; i < 6; i += 1) {
+        const angle = (i / 6) * Math.PI * 2;
+        ring.add(
+          tubeBetween(
+            new THREE.Vector3(
+              Math.cos(angle) * 24,
+              Math.sin(angle) * 24,
+              0
+            ),
+            new THREE.Vector3(
+              Math.cos(angle) * 55,
+              Math.sin(angle) * 55,
+              0
+            ),
+            0.8,
+            intMetal,
+            6
+          )
+        );
+      }
+
+      const hub = new THREE.Mesh(
+        new THREE.TorusGeometry(24, 2.2, 10, 64),
+        intMetal
+      );
+      ring.add(hub);
+
+      for (let i = 0; i < 48; i += 1) {
+        const angle = (i / 48) * Math.PI * 2;
+        const windowMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1.4, 2.8, 0.15),
+          matWindow
+        );
+        windowMesh.position.set(
+          Math.cos(angle) * 66.5,
+          Math.sin(angle) * 66.5,
+          0
+        );
+        windowMesh.rotation.z = angle;
+        ring.add(windowMesh);
+      }
+
+      const accentMaterial = new THREE.LineBasicMaterial({
+        color: 0x65e8ff,
+        transparent: true,
+        opacity: 0.34,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      ring.add(makeCircleLine(57, accentMaterial, 160));
+
+      const light = new THREE.PointLight(0xffc47a, 17, 160, 2);
+      light.position.set(62, 0, 0);
+      group.add(light);
+
+      interior.add(group);
+      return { group, ring, light };
+    }
+
+    function buildCryo() {
+      const group = new THREE.Group();
+      group.position.z = -30;
+
+      const platform = new THREE.Mesh(
+        new THREE.CylinderGeometry(26, 28, 2, 48),
+        intDark
+      );
+      platform.position.y = -12;
+      group.add(platform);
+
+      for (let side = -1; side <= 1; side += 2) {
+        for (let i = 0; i < 7; i += 1) {
+          const pod = new THREE.Group();
+          pod.position.set(side * 14, -6, -18 + i * 6);
+
+          const body = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.6, 1.6, 7, 16),
+            intMetal
+          );
+          body.rotation.x = Math.PI / 2;
+          pod.add(body);
+
+          const glass = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.72, 1.72, 3.2, 16),
+            new THREE.MeshBasicMaterial({
+              color: 0x7af4ff,
+              transparent: true,
+              opacity: 0.34,
+              blending: THREE.AdditiveBlending,
+              depthWrite: false
+            })
+          );
+          glass.rotation.x = Math.PI / 2;
+          pod.add(glass);
+
+          const capA = new THREE.Mesh(
+            new THREE.SphereGeometry(1.6, 16, 10),
+            intMetal
+          );
+          capA.position.z = 3.5;
+          pod.add(capA);
+
+          const capB = capA.clone();
+          capB.position.z = -3.5;
+          pod.add(capB);
+
+          const status = new THREE.Mesh(
+            new THREE.BoxGeometry(1.2, 0.12, 0.4),
+            i % 3 === 0 ? intGlowGreen : intGlowCyan
+          );
+          status.position.set(0, 1.7, 0);
+          pod.add(status);
+
+          group.add(pod);
+        }
+      }
+
+      const bed = new THREE.Mesh(
+        new THREE.BoxGeometry(6, 1.2, 14),
+        intMetal
+      );
+      bed.position.set(0, 2, 0);
+      group.add(bed);
+
+      const medHologram = new THREE.Mesh(
+        new THREE.BoxGeometry(4, 1, 0.1),
+        intGlowGreen
+      );
+      medHologram.position.set(0, 4.1, 0);
+      group.add(medHologram);
+
+      const crossVertical = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 6, 1.2),
+        intGlowGreen
+      );
+      crossVertical.position.set(-20, 12, 0);
+      group.add(crossVertical);
+
+      const crossHorizontal = new THREE.Mesh(
+        new THREE.BoxGeometry(3.4, 1.2, 1.2),
+        intGlowGreen
+      );
+      crossHorizontal.position.set(-20, 13.5, 0);
+      group.add(crossHorizontal);
+
+      const light = new THREE.PointLight(0x7bffd2, 12, 100, 2);
+      light.position.set(0, 10, 0);
+      group.add(light);
+
+      interior.add(group);
+      return { group, medHologram };
+    }
+
+    function buildAgri() {
+      const group = new THREE.Group();
+      group.position.z = -70;
+
+      const planterMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0e4a2a,
+        emissive: 0x041b0d,
+        emissiveIntensity: 0.62,
+        roughness: 1,
+        metalness: 0.04
+      });
+
+      const planterRing = new THREE.Mesh(
+        new THREE.TorusGeometry(40, 4, 8, 120),
+        planterMaterial
+      );
+      group.add(planterRing);
+
+      const cropMaterialA = new THREE.MeshStandardMaterial({
+        color: 0x32d96b,
+        emissive: 0x03170b,
+        emissiveIntensity: 0.52,
+        roughness: 0.9,
+        metalness: 0
+      });
+
+      const cropMaterialB = new THREE.MeshStandardMaterial({
+        color: 0x9cff6a,
+        emissive: 0x061d0b,
+        emissiveIntensity: 0.52,
+        roughness: 0.9,
+        metalness: 0
+      });
+
+      for (let i = 0; i < 62; i += 1) {
+        const angle = (i / 62) * Math.PI * 2;
+        const radial = 40 + (i % 3) * 0.7;
+
+        const crop = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(1.2 + Math.random() * 1.4, 0),
+          i % 4 === 0 ? cropMaterialB : cropMaterialA
+        );
+        crop.position.set(
+          Math.cos(angle) * radial,
+          Math.sin(angle) * radial,
+          Math.sin(i) * 2
+        );
+        group.add(crop);
+      }
+
+      const growLightMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff5cf2,
+        transparent: true,
+        opacity: 0.52,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const growLight = new THREE.Mesh(
+        new THREE.TorusGeometry(36, 0.35, 6, 120),
+        growLightMaterial
+      );
+      group.add(growLight);
+
+      for (let side = -1; side <= 1; side += 2) {
+        for (let i = 0; i < 5; i += 1) {
+          const rack = new THREE.Mesh(
+            new THREE.BoxGeometry(22, 1.4, 3),
+            intDark
+          );
+          rack.position.set(side * 18, -15 + i * 5, i * 4 - 8);
+          group.add(rack);
+
+          const cropStrip = new THREE.Mesh(
+            new THREE.BoxGeometry(20, 0.35, 2.4),
+            i % 2 === 0 ? intGlowGreen : intGlowCyan
+          );
+          cropStrip.position.set(
+            side * 18,
+            -14.2 + i * 5,
+            i * 4 - 8
+          );
+          group.add(cropStrip);
+        }
+      }
+
+      for (let i = 0; i < 4; i += 1) {
+        const angle = (i / 4) * Math.PI * 2;
+        group.add(
+          tubeBetween(
+            new THREE.Vector3(
+              Math.cos(angle) * 30,
+              Math.sin(angle) * 30,
+              -22
+            ),
+            new THREE.Vector3(
+              Math.cos(angle) * 30,
+              Math.sin(angle) * 30,
+              22
+            ),
+            0.35,
+            intGlowCyan,
+            6
+          )
+        );
+      }
+
+      const light = new THREE.PointLight(0x9cff9a, 15, 120, 2);
+      light.position.set(0, 22, 0);
+      group.add(light);
+
+      interior.add(group);
+      return { group, growLight };
+    }
+
+    function buildReactor() {
+      const group = new THREE.Group();
+      group.position.z = -120;
+
+      const chamber = new THREE.Mesh(
+        new THREE.CylinderGeometry(26, 26, 22, 48, 1, true),
+        intDark
+      );
+      chamber.rotation.x = Math.PI / 2;
+      group.add(chamber);
+
+      const reactorMaterial = new THREE.MeshStandardMaterial({
+        color: 0x3a2017,
+        metalness: 0.82,
+        roughness: 0.25,
+        emissive: 0xff6b22,
+        emissiveIntensity: 1.4
+      });
+
+      const torus = new THREE.Mesh(
+        new THREE.TorusGeometry(18, 2.6, 16, 72),
+        reactorMaterial
+      );
+      group.add(torus);
+
+      const core = new THREE.Mesh(
+        new THREE.SphereGeometry(7, 24, 16),
+        new THREE.MeshBasicMaterial({
+          color: 0xffb36b,
+          transparent: true,
+          opacity: 0.86,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      group.add(core);
+
+      const rings = [];
+      for (let i = 0; i < 3; i += 1) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(12 + i * 4, 0.18, 6, 64),
+          intGlowOrange
+        );
+        ring.rotation.set(
+          Math.random() * Math.PI,
+          Math.random() * Math.PI,
+          0
+        );
+        group.add(ring);
+        rings.push(ring);
+      }
+
+      for (let i = 0; i < 4; i += 1) {
+        const angle = (i / 4) * Math.PI * 2;
+        group.add(
+          tubeBetween(
+            new THREE.Vector3(
+              Math.cos(angle) * 10,
+              Math.sin(angle) * 10,
+              -8
+            ),
+            new THREE.Vector3(
+              Math.cos(angle) * 24,
+              Math.sin(angle) * 24,
+              -32
+            ),
+            1.2,
+            intMetal,
+            8
+          )
+        );
+      }
+
+      const light = new THREE.PointLight(0xff9a54, 24, 150, 2);
+      group.add(light);
+
+      interior.add(group);
+      return { group, torus, core, rings, light };
+    }
+
+    function buildEngineRoom() {
+      const group = new THREE.Group();
+      group.position.z = -158;
+
+      const floor = new THREE.Mesh(
+        new THREE.CylinderGeometry(30, 26, 3, 48),
+        intDark
+      );
+      floor.position.y = -18;
+      group.add(floor);
+
+      const energies = [];
+
+      for (let i = 0; i < 4; i += 1) {
+        const angle = (i / 4) * Math.PI * 2;
+        const x = Math.cos(angle) * 20;
+        const y = Math.sin(angle) * 20;
+
+        group.add(
+          tubeBetween(
+            new THREE.Vector3(x * 0.34, y * 0.34, 20),
+            new THREE.Vector3(x, y, -28),
+            1.4,
+            intMetal,
+            8
+          )
+        );
+
+        const bell = new THREE.Mesh(
+          new THREE.CylinderGeometry(4, 8, 18, 20, 1, true),
+          intMetal
+        );
+        bell.rotation.x = Math.PI / 2;
+        bell.position.set(x, y, -43);
+        group.add(bell);
+
+        const glowMaterial = intGlowCyan.clone();
+        const glow = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.2, 5.5, 34, 16, 1, true),
+          glowMaterial
+        );
+        glow.rotation.x = Math.PI / 2;
+        glow.position.set(x, y, -63);
+        group.add(glow);
+
+        const light = new THREE.PointLight(0x52ddff, 9, 78, 2);
+        light.position.set(x, y, -50);
+        group.add(light);
+
+        energies.push({
+          glow,
+          light,
+          phase: i * 0.7
+        });
+      }
+
+      const consoleBase = new THREE.Mesh(
+        new THREE.BoxGeometry(12, 3, 2),
+        intMetal
+      );
+      consoleBase.position.set(0, 0, 15);
+      group.add(consoleBase);
+
+      const consoleScreen = new THREE.Mesh(
+        new THREE.BoxGeometry(10, 0.2, 0.2),
+        intGlowCyan
+      );
+      consoleScreen.position.set(0, 1.8, 15.5);
+      group.add(consoleScreen);
+
+      interior.add(group);
+      return { group, energies };
+    }
+
+    function buildInterior() {
+      const hullCutaway = new THREE.Mesh(
+        new THREE.CylinderGeometry(62, 62, 330, 48, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: 0x1b87b4,
+          transparent: true,
+          opacity: 0.035,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        })
+      );
+      hullCutaway.rotation.x = Math.PI / 2;
+      interior.add(hullCutaway);
+
+      const ribMaterial = new THREE.MeshBasicMaterial({
+        color: 0x1f9ccc,
+        transparent: true,
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      for (let z = -150; z <= 150; z += 30) {
+        const rib = new THREE.Mesh(
+          new THREE.TorusGeometry(61, 0.5, 6, 80),
+          ribMaterial
+        );
+        rib.position.z = z;
+        interior.add(rib);
+      }
+
+      const corridor = new THREE.Mesh(
+        new THREE.CylinderGeometry(7, 7, 300, 24, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: 0x22b9e8,
+          transparent: true,
+          opacity: 0.055,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      corridor.rotation.x = Math.PI / 2;
+      interior.add(corridor);
+
+      for (let z = -140; z <= 160; z += 40) {
+        const corridorRing = new THREE.Mesh(
+          new THREE.TorusGeometry(8, 0.3, 6, 40),
+          intGlowCyan
+        );
+        corridorRing.position.z = z;
+        interior.add(corridorRing);
+      }
+
+      const interiorLights = [
+        { position: [0, 8, 150], color: 0x9befff, intensity: 15, distance: 100 },
+        { position: [0, 3, 110], color: 0x54e8ff, intensity: 14, distance: 90 },
+        { position: [0, 16, 70], color: 0x7dffad, intensity: 15, distance: 100 },
+        { position: [0, 5, 28], color: 0xffc47a, intensity: 12, distance: 100 },
+        { position: [0, 10, -30], color: 0x83ffe0, intensity: 10, distance: 90 },
+        { position: [0, 17, -70], color: 0x9cff9a, intensity: 12, distance: 100 },
+        { position: [0, 2, -120], color: 0xff9a54, intensity: 18, distance: 120 },
+        { position: [0, 2, -158], color: 0x54ddff, intensity: 12, distance: 100 }
+      ];
+
+      for (const item of interiorLights) {
+        const light = new THREE.PointLight(
+          item.color,
+          item.intensity,
+          item.distance,
+          2
+        );
+        light.position.set(...item.position);
+        interior.add(light);
+      }
+
+      animated.interior.bridge = buildBridge();
+      animated.interior.ai = buildAICore();
+      animated.interior.biome = buildInteriorBiome();
+      animated.interior.habitat = buildInteriorHabitat();
+      animated.interior.cryo = buildCryo();
+      animated.interior.agri = buildAgri();
+      animated.interior.reactor = buildReactor();
+      animated.interior.engine = buildEngineRoom();
+    }
+
+    // -------------------------------------------------------------------------
+    // Build the ship
+    // -------------------------------------------------------------------------
+    buildExterior();
+    buildInterior();
+
+    // -------------------------------------------------------------------------
+    // Interior sections and UI
+    // -------------------------------------------------------------------------
+    const sections = [
+      {
+        id: "bridge",
+        name: "01 / 舰桥与导航环",
+        kicker: "COMMAND & NAVIGATION",
+        anchor: new THREE.Vector3(0, 18, 150),
+        camera: {
+          pos: new THREE.Vector3(48, 40, 196),
+          target: new THREE.Vector3(0, 2, 150)
+        },
+        desc:
+          "飞船的指挥中枢。船员在这里读取星距、磁帆状态与生态闭环指标；AI“Ship”通过舰桥与全船感知系统保持对航行和生命维持的实时管理。",
+        meta: "<span>TAU CETI VECTOR</span><span>SHIP AI LINK</span>"
+      },
+      {
+        id: "ai",
+        name: "02 / Ship · AI 核心",
+        kicker: "SHIP MIND",
+        anchor: new THREE.Vector3(0, 20, 110),
+        camera: {
+          pos: new THREE.Vector3(42, 32, 145),
+          target: new THREE.Vector3(0, 0, 110)
+        },
+        desc:
+          "小说以“Ship”的视角展开叙述。AI 同时充当导航员、生态管理员、医生与叙事者。该核心象征全船传感器、生物圈数据库和自治决策系统。",
+        meta: "<span>NARRATOR</span><span>SENSOR MESH</span><span>AUTONOMY</span>"
+      },
+      {
+        id: "biome",
+        name: "03 / 生态穹顶",
+        kicker: "BIOMES & CLOSED LOOP",
+        anchor: new THREE.Vector3(-22, 18, 70),
+        camera: {
+          pos: new THREE.Vector3(64, 50, 106),
+          target: new THREE.Vector3(0, 0, 70)
+        },
+        desc:
+          "多生物圈舱是“The Ship”长期自持的关键：森林、湿地、水体与微生物群落形成人工物质循环。重力、光照、湿度与物种平衡都必须持续调校。",
+        meta: "<span>BIOSPHERE</span><span>OXYGEN LOOP</span><span>ECOLOGY</span>"
+      },
+      {
+        id: "habitat",
+        name: "04 / 居住环",
+        kicker: "HABITAT RING",
+        anchor: new THREE.Vector3(62, 40, 28),
+        camera: {
+          pos: new THREE.Vector3(108, 78, 92),
+          target: new THREE.Vector3(12, 0, 28)
+        },
+        desc:
+          "沿环形舱段布置的居住区构成世代船员的“新地球城”。旋转生活区提供离心重力；公共空间、学校、农业平台与维护通道围绕轴线分布。",
+        meta: "<span>CENTRIFUGAL GRAVITY</span><span>GENERATION CREW</span>"
+      },
+      {
+        id: "cryo",
+        name: "05 / 医疗与低温区",
+        kicker: "CRYO & MEDICAL",
+        anchor: new THREE.Vector3(0, 16, -30),
+        camera: {
+          pos: new THREE.Vector3(48, 34, 8),
+          target: new THREE.Vector3(0, -2, -30)
+        },
+        desc:
+          "长期星际航行中，基因库、低温休眠、生殖健康与疾病隔离共同维持族群稳定。生态与医疗监测网络会把这些舱段与全船连接起来。",
+        meta: "<span>GENE BANK</span><span>MEDICAL</span><span>CRYO</span>"
+      },
+      {
+        id: "agri",
+        name: "06 / 农业 / 生命维持",
+        kicker: "AGRICULTURE & LIFE SUPPORT",
+        anchor: new THREE.Vector3(0, 24, -70),
+        camera: {
+          pos: new THREE.Vector3(58, 50, -28),
+          target: new THREE.Vector3(0, 0, -70)
+        },
+        desc:
+          "水培架、作物灯与回收管道组成闭环农业。营养、氧气和废弃物在这里被重新处理；任何失衡都可能沿着人类与生态网络传导。",
+        meta: "<span>HYDROPONICS</span><span>RECYCLING</span><span>FOOD LOOP</span>"
+      },
+      {
+        id: "reactor",
+        name: "07 / 聚变核心",
+        kicker: "FUSION CORE",
+        anchor: new THREE.Vector3(0, 12, -120),
+        camera: {
+          pos: new THREE.Vector3(50, 38, -88),
+          target: new THREE.Vector3(0, 0, -120)
+        },
+        desc:
+          "聚变核心为生态维生、推进与热控系统提供长期能量。热量必须通过大型辐射器排入深空，否则封闭生态系统会迅速过热。",
+        meta: "<span>FUSION</span><span>POWER GRID</span><span>THERMAL CONTROL</span>"
+      },
+      {
+        id: "engine",
+        name: "08 / 推进 / 磁帆维护",
+        kicker: "PROPULSION & MAGSAIL",
+        anchor: new THREE.Vector3(0, 8, -158),
+        camera: {
+          pos: new THREE.Vector3(60, 38, -112),
+          target: new THREE.Vector3(0, 0, -165)
+        },
+        desc:
+          "星际阶段的聚变喷流与前部磁帆共同服务于加速和减速。抵达 Tau Ceti 后，巨大的减速结构会把飞船从星际速度拉回可操作速度。",
+        meta: "<span>MAGSAIL</span><span>FUSION TORCH</span><span>DECELERATION</span>"
+      }
+    ];
+
+    const sectionList = $("#sectionList");
+    const hotspotContainer = $("#hotspots");
+
+    for (const section of sections) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "section-btn";
+      button.dataset.id = section.id;
+      button.innerHTML = `<span>${section.name}</span><small>${section.kicker}</small>`;
+      button.addEventListener("click", () => goToSection(section));
+      sectionList.appendChild(button);
+      section.buttonEl = button;
+
+      const hotspot = document.createElement("button");
+      hotspot.type = "button";
+      hotspot.className = "hotspot";
+      hotspot.dataset.id = section.id;
+      hotspot.innerHTML = `<span class="dot"></span><span class="name">${section.name.replace(
+        /^\d+\s*\/\s*/,
+        ""
+      )}</span>`;
+      hotspot.addEventListener("click", () => goToSection(section));
+      hotspotContainer.appendChild(hotspot);
+      section.hotspotEl = hotspot;
+    }
+
+    // -------------------------------------------------------------------------
+    // State and navigation
+    // -------------------------------------------------------------------------
+    const sectionWrap = $("#sectionWrap");
+    const modeLabel = $("#modeLabel");
+    const infoCard = $("#infoCard");
+    const infoKicker = $("#infoKicker");
+    const infoTitle = $("#infoTitle");
+    const infoDesc = $("#infoDesc");
+    const infoMeta = $("#infoMeta");
+    const btnInterior = $("#btnInterior");
+    const btnExterior = $("#btnExterior");
+    const fadeEl = $("#fade");
+    const chkHotspots = $("#chkHotspots");
+
+    let currentMode = "exterior";
+    let activeSectionId = null;
+    let pendingSection = null;
+    let labelsEnabled = true;
+    let timeScale = 1;
+    let cameraTween = null;
+    let loaded = false;
+
+    function updateModeUI() {
+      modeLabel.textContent =
+        currentMode === "exterior" ? "外部 · 深空航行" : "内部 · 剖视探索";
+
+      sectionWrap.style.display =
+        currentMode === "interior" ? "block" : "none";
+
+      btnInterior.classList.toggle("active", currentMode === "interior");
+      btnExterior.classList.toggle("active", currentMode === "exterior");
+      btnInterior.textContent =
+        currentMode === "interior" ? "内部探索中" : "进入飞船内部";
+    }
+
+    function showInfo(section) {
+      infoKicker.textContent = section.kicker;
+      infoTitle.textContent = section.name;
+      infoDesc.textContent = section.desc;
+      infoMeta.innerHTML = section.meta || "";
+      infoCard.classList.add("show");
+    }
+
+    function hideInfo() {
+      infoCard.classList.remove("show");
+    }
+
+    function clearActiveSection() {
+      activeSectionId = null;
+      for (const section of sections) {
+        section.buttonEl.classList.remove("active");
+        section.hotspotEl.classList.remove("active");
+      }
+    }
+
+    function moveCamera(position, target, duration = 1000) {
+      cameraTween = {
+        fromPos: camera.position.clone(),
+        toPos: position.clone(),
+        fromTarget: controls.target.clone(),
+        toTarget: target.clone(),
+        start: performance.now(),
+        duration
+      };
+      controls.enabled = false;
+    }
+
+    function focusSection(section) {
+      activeSectionId = section.id;
+
+      for (const item of sections) {
+        item.buttonEl.classList.toggle("active", item.id === section.id);
+        item.hotspotEl.classList.toggle("active", item.id === section.id);
+      }
+
+      showInfo(section);
+      moveCamera(section.camera.pos, section.camera.target, 1100);
+    }
+
+    function goToSection(section) {
+      if (currentMode !== "interior") {
+        pendingSection = section;
+        changeMode("interior");
+      } else {
+        focusSection(section);
+      }
+    }
+
+    function changeMode(nextMode) {
+      if (nextMode === currentMode) {
+        return;
+      }
+
+      fadeEl.classList.add("show");
+
+      window.setTimeout(() => {
+        currentMode = nextMode;
+
+        exterior.visible = currentMode === "exterior";
+        interior.visible = currentMode === "interior";
+
+        controls.minDistance = currentMode === "exterior" ? 35 : 8;
+        controls.maxDistance = currentMode === "exterior" ? 1000 : 330;
+
+        if (currentMode === "exterior") {
+          clearActiveSection();
+          hideInfo();
+          moveCamera(
+            exteriorCamera.pos,
+            exteriorCamera.target,
+            950
+          );
+        } else {
+          if (pendingSection) {
+            const section = pendingSection;
+            pendingSection = null;
+            focusSection(section);
+          } else {
+            clearActiveSection();
+            hideInfo();
+            moveCamera(
+              interiorCamera.pos,
+              interiorCamera.target,
+              950
+            );
+          }
+        }
+
+        updateModeUI();
+
+        window.setTimeout(() => {
+          fadeEl.classList.remove("show");
+        }, 70);
+      }, 260);
+    }
+
+    function resetView() {
+      if (currentMode === "exterior") {
+        moveCamera(exteriorCamera.pos, exteriorCamera.target, 900);
+      } else {
+        clearActiveSection();
+        hideInfo();
+        moveCamera(interiorCamera.pos, interiorCamera.target, 900);
+      }
+    }
+
+    btnInterior.addEventListener("click", () => {
+      pendingSection = null;
+      changeMode("interior");
+    });
+
+    btnExterior.addEventListener("click", () => {
+      pendingSection = null;
+      changeMode("exterior");
+    });
+
+    $("#btnReset").addEventListener("click", resetView);
+
+    $("#closeInfo").addEventListener("click", () => {
+      hideInfo();
+      clearActiveSection();
+    });
+
+    $("#speed").addEventListener("input", (event) => {
+      timeScale = parseFloat(event.target.value);
+      $("#speedLabel").textContent = `${timeScale.toFixed(1)}×`;
+    });
+
+    chkHotspots.addEventListener("change", (event) => {
+      labelsEnabled = event.target.checked;
+    });
+
+    // -------------------------------------------------------------------------
+    // Hotspot screen projection
+    // -------------------------------------------------------------------------
+    const hotspotWorld = new THREE.Vector3();
+    const hotspotProjected = new THREE.Vector3();
+    const cameraDirection = new THREE.Vector3();
+
+    function updateHotspots() {
+      if (currentMode !== "interior" || !labelsEnabled) {
+        for (const section of sections) {
+          section.hotspotEl.classList.remove("visible");
+        }
+        return;
+      }
+
+      interior.updateWorldMatrix(true, true);
+      camera.updateMatrixWorld();
+      camera.getWorldDirection(cameraDirection);
+
+      for (const section of sections) {
+        hotspotWorld
+          .copy(section.anchor)
+          .applyMatrix4(interior.matrixWorld);
+
+        hotspotProjected.copy(hotspotWorld).project(camera);
+
+        const toPoint = hotspotWorld.clone().sub(camera.position);
+        const behind = toPoint.dot(cameraDirection) <= 0;
+
+        const x = (hotspotProjected.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-hotspotProjected.y * 0.5 + 0.5) * window.innerHeight;
+
+        const onScreen =
+          !behind &&
+          hotspotProjected.z > -1 &&
+          hotspotProjected.z < 1 &&
+          x > -90 &&
+          x < window.innerWidth + 90 &&
+          y > -90 &&
+          y < window.innerHeight + 90;
+
+        section.hotspotEl.style.left = `${x}px`;
+        section.hotspotEl.style.top = `${y}px`;
+        section.hotspotEl.classList.toggle("visible", onScreen);
+        section.hotspotEl.classList.toggle(
+          "active",
+          section.id === activeSectionId
+        );
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Animation loop
+    // -------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+    let elapsed = 0;
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+
+      const rawDelta = Math.min(clock.getDelta(), 0.05);
+      const delta = rawDelta * timeScale;
+
+      elapsed += delta;
+
+      // Deep space motion
+      allStars.rotation.y += delta * 0.0028;
+      starStreak.update(delta);
+      planetGroup.rotation.y += delta * 0.00075;
+
+      // Gentle ship drift in exterior mode
+      if (currentMode === "exterior") {
+        shipRoot.position.y = Math.sin(elapsed * 0.35) * 1.35;
+        shipRoot.rotation.z = Math.sin(elapsed * 0.055) * 0.018;
+        shipRoot.rotation.x = Math.sin(elapsed * 0.031) * 0.006;
+      } else {
+        shipRoot.position.y = 0;
+        shipRoot.rotation.z = 0;
+        shipRoot.rotation.x = 0;
+      }
+
+      // Exterior rings counter-rotate
+      for (const ring of animated.rings) {
+        ring.userData.spin.rotation.z +=
+          delta * 0.13 * ring.userData.direction;
+      }
+
+      // Gossamer magsail slow rotation
+      if (animated.sail) {
+        animated.sail.rotation.z += delta * 0.015;
+      }
+
+      // Engine plumes
+      for (const item of animated.plumes) {
+        const pulse =
+          0.82 + 0.28 * Math.sin(elapsed * 7.0 + item.phase);
+
+        item.plume.material.opacity = item.baseOpacity * pulse;
+        item.core.material.opacity = 0.32 + 0.2 * pulse;
+        item.plume.scale.y = 0.94 + 0.08 * Math.sin(elapsed * 5 + item.phase);
+        item.core.scale.y = item.plume.scale.y;
+        item.light.intensity =
+          8 + 4.5 * (0.5 + 0.5 * Math.sin(elapsed * 8.5 + item.phase));
+        item.glow.material.opacity =
+          0.68 + 0.26 * Math.sin(elapsed * 6.2 + item.phase);
+      }
+
+      // Navigation beacons
+      for (const beacon of animated.beacons) {
+        const pulse =
+          0.5 + 0.5 * Math.sin(elapsed * 3.2 + beacon.phase);
+        beacon.material.opacity = 0.22 + 0.78 * pulse;
+        beacon.mesh.scale.setScalar(0.72 + 0.56 * pulse);
+      }
+
+      // Interior animations
+      const ia = animated.interior;
+
+      if (ia.bridge) {
+        ia.bridge.holo.rotation.y += delta * 0.9;
+        ia.bridge.holo.rotation.x += delta * 0.22;
+        ia.bridge.holoRing.rotation.z += delta * 0.72;
+      }
+
+      if (ia.ai) {
+        ia.ai.core.rotation.x += delta * 0.75;
+        ia.ai.core.rotation.y += delta * 1.12;
+        ia.ai.cage.rotation.y -= delta * 0.16;
+
+        for (let i = 0; i < ia.ai.rings.length; i += 1) {
+          const ring = ia.ai.rings[i];
+          ring.rotation.x += delta * (0.12 + i * 0.05);
+          ring.rotation.y += delta * (0.1 + i * 0.07);
+        }
+
+        const aiPulse = 1 + Math.sin(elapsed * 2.8) * 0.08;
+        ia.ai.core.scale.setScalar(aiPulse);
+      }
+
+      if (ia.biome) {
+        ia.biome.halo.rotation.z += delta * 0.1;
+      }
+
+      if (ia.habitat) {
+        ia.habitat.ring.rotation.z += delta * 0.035;
+      }
+
+      if (ia.cryo) {
+        ia.cryo.medHologram.scale.x =
+          1 + Math.sin(elapsed * 2.6) * 0.05;
+      }
+
+      if (ia.agri) {
+        ia.agri.growLight.material.opacity =
+          0.4 + 0.3 * (0.5 + 0.5 * Math.sin(elapsed * 2.2));
+      }
+
+      if (ia.reactor) {
+        ia.reactor.torus.rotation.z += delta * 0.4;
+        ia.reactor.core.scale.setScalar(
+          1 + Math.sin(elapsed * 5.0) * 0.1
+        );
+        ia.reactor.light.intensity =
+          17 + 9 * (0.5 + 0.5 * Math.sin(elapsed * 6.0));
+
+        for (let i = 0; i < ia.reactor.rings.length; i += 1) {
+          const ring = ia.reactor.rings[i];
+          ring.rotation.x += delta * (0.15 + i * 0.08);
+          ring.rotation.y += delta * (0.2 + i * 0.1);
+        }
+      }
+
+      if (ia.engine) {
+        for (let i = 0; i < ia.engine.energies.length; i += 1) {
+          const energy = ia.engine.energies[i];
+          const pulse =
+            0.5 + 0.5 * Math.sin(elapsed * 8.0 + energy.phase);
+          energy.glow.material.opacity = 0.45 + 0.4 * pulse;
+          energy.light.intensity = 5 + 5 * pulse;
+        }
+      }
+
+      // Camera animation
+      if (cameraTween) {
+        const progress = Math.min(
+          1,
+          (now - cameraTween.start) / cameraTween.duration
+        );
+
+        const eased =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        camera.position.lerpVectors(
+          cameraTween.fromPos,
+          cameraTween.toPos,
+          eased
+        );
+
+        const lookTarget = new THREE.Vector3().lerpVectors(
+          cameraTween.fromTarget,
+          cameraTween.toTarget,
+          eased
+        );
+
+        camera.lookAt(lookTarget);
+
+        if (progress >= 1) {
+          controls.target.copy(cameraTween.toTarget);
+          camera.position.copy(cameraTween.toPos);
+          cameraTween = null;
+          controls.enabled = true;
+          controls.update();
+        }
+      } else {
+        controls.update();
+      }
+
+      updateHotspots();
+      composer.render();
+
+      if (!loaded) {
+        loaded = true;
+        $("#loading").classList.add("hidden");
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Resize
+    // -------------------------------------------------------------------------
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.addEventListener("resize", onWindowResize);
+    window.addEventListener("orientationchange", () => {
+      window.setTimeout(onWindowResize, 220);
+    });
+
+    // -------------------------------------------------------------------------
+    // Start
+    // -------------------------------------------------------------------------
+    updateModeUI();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

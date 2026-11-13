@@ -1,0 +1,17 @@
+{
+  "campaign_id": "deepseek-v4.1-flash-20261113",
+  "item_id": "coding-c07",
+  "model_alias": "deepseek-v4.1-flash",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "4d1f77a33baec2bc7e6f82576c0bfa24874f533074167b22324a484ab9d4aae5",
+  "source_answer_sha256": "958f5e081f57c308d870379f96352d4e0489eb408573f53cf222a3873fc1de5c",
+  "source_run_id": "20261113T055610603572Z-04e24592",
+  "source_request_id": "9ba2af9aa67d476aa86027be7067af5a",
+  "external_urls": [
+    "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

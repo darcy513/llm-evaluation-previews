@@ -1,0 +1,16 @@
+{
+  "campaign_id": "deepseek-v4.1-flash-20261113",
+  "item_id": "coding-c05",
+  "model_alias": "deepseek-v4.1-flash",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "cc51266effd615fe575e020c44a81f0ed4e268b4bbad66f9314254523f1105f7",
+  "source_answer_sha256": "911a4d7d8a53189ed3fe15bba9034d8b64a6d65b1fe9fed0d6cf793308a56104",
+  "source_run_id": "20261113T055610603572Z-04e24592",
+  "source_request_id": "8c213149650f4494bcb785d8dbe147b9",
+  "external_urls": [
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

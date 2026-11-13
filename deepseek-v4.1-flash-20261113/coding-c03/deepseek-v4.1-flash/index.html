@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>L / R 隐形眼镜盒 · Three.js</title>
+  <style>
+    :root {
+      --ink: #0a3f44;
+      --ink-soft: rgba(10, 63, 68, 0.62);
+      --coral: #ff6f7f;
+      --blue: #4d97ff;
+      --paper: #f6eee2;
+      --glass: rgba(255, 255, 255, 0.54);
+      --glass-border: rgba(255, 255, 255, 0.72);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      overflow: hidden;
+      color: var(--ink);
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(ellipse at 15% 12%, rgba(255, 137, 154, 0.42), transparent 38%),
+        radial-gradient(ellipse at 88% 80%, rgba(78, 153, 255, 0.3), transparent 40%),
+        linear-gradient(135deg, #f8f2e9 0%, #e9f4f1 50%, #f2e2e5 100%);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(circle at center, transparent 35%, rgba(9, 54, 58, 0.08) 120%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 32%);
+      mix-blend-mode: multiply;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+    }
+
+    #scene canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #scene canvas:active {
+      cursor: grabbing;
+    }
+
+    .ui {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: clamp(18px, 3vw, 40px);
+      pointer-events: none;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .intro {
+      max-width: 620px;
+    }
+
+    .eyebrow {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.24em;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 9px 0 8px;
+      padding: 0;
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: clamp(32px, 4.6vw, 64px);
+      line-height: 0.95;
+      letter-spacing: -0.055em;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    h1 .letters {
+      display: inline-flex;
+      align-items: baseline;
+      letter-spacing: -0.07em;
+    }
+
+    h1 .l {
+      color: var(--coral);
+    }
+
+    h1 .r {
+      color: var(--blue);
+    }
+
+    h1 .slash {
+      margin: 0 4px;
+      color: rgba(10, 63, 68, 0.25);
+      font-weight: 500;
+    }
+
+    h1 .cn {
+      font-size: clamp(15px, 1.8vw, 24px);
+      font-weight: 600;
+      letter-spacing: 0;
+      color: var(--ink-soft);
+      white-space: nowrap;
+    }
+
+    .intro p {
+      margin: 0;
+      font-size: clamp(12px, 1.3vw, 14px);
+      line-height: 1.65;
+      color: var(--ink-soft);
+    }
+
+    .intro p strong {
+      color: var(--ink);
+    }
+
+    .status-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      padding-top: 4px;
+    }
+
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      background: var(--glass);
+      box-shadow: 0 8px 24px rgba(13, 63, 68, 0.07);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      color: var(--ink-soft);
+      transition: background 0.25s, color 0.25s;
+    }
+
+    .chip .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.4;
+      transition: opacity 0.25s, box-shadow 0.25s, transform 0.25s;
+    }
+
+    .chip.l {
+      color: #c34e61;
+    }
+
+    .chip.r {
+      color: #2f74da;
+    }
+
+    .chip .state {
+      color: var(--ink-soft);
+      font-weight: 500;
+    }
+
+    .chip.is-open {
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .chip.is-open .dot {
+      opacity: 1;
+      transform: scale(1.2);
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.55);
+    }
+
+    .chip.is-open .state {
+      color: var(--ink);
+    }
+
+    .bottom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .controls {
+      pointer-events: auto;
+      display: flex;
+      gap: 4px;
+      padding: 5px;
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.52);
+      box-shadow: 0 12px 34px rgba(13, 63, 68, 0.1);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: transparent;
+      color: var(--ink-soft);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      background: rgba(10, 63, 68, 0.07);
+      color: var(--ink);
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    button.primary {
+      background: var(--ink);
+      color: #fffaf2;
+    }
+
+    button.primary:hover {
+      background: #10565c;
+      color: #fff;
+    }
+
+    .hint {
+      font-size: 11px;
+      letter-spacing: 0.03em;
+      color: var(--ink-soft);
+      background: rgba(255, 255, 255, 0.38);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 999px;
+      padding: 7px 11px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .corner {
+      position: absolute;
+      right: clamp(18px, 3vw, 40px);
+      bottom: clamp(18px, 3vw, 40px);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: rgba(10, 63, 68, 0.38);
+      writing-mode: vertical-rl;
+      text-transform: uppercase;
+    }
+
+    .corner::before {
+      content: "";
+      display: block;
+      width: 1px;
+      height: 34px;
+      margin: 0 auto 10px;
+      background: currentColor;
+      opacity: 0.45;
+    }
+
+    @media (max-width: 720px) {
+      .ui {
+        padding: 18px;
+      }
+
+      .topbar {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .status-row {
+        justify-content: flex-start;
+        padding-top: 0;
+      }
+
+      h1 {
+        gap: 6px;
+      }
+
+      .corner {
+        display: none;
+      }
+
+      .hint {
+        font-size: 10px;
+      }
+
+      .controls {
+        max-width: calc(100vw - 36px);
+        overflow-x: auto;
+      }
+
+      button {
+        padding: 9px 11px;
+      }
+    }
+
+    @media (max-width: 440px) {
+      h1 .cn {
+        width: 100%;
+        font-size: 14px;
+      }
+
+      .intro p {
+        max-width: 280px;
+      }
+
+      .status-row {
+        gap: 6px;
+      }
+
+      .chip {
+        padding: 6px 10px;
+        font-size: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene" aria-hidden="true"></div>
+
+  <div class="ui">
+    <header class="topbar">
+      <div class="intro">
+        <div class="eyebrow">3D Study · Contact Lens Case</div>
+        <h1>
+          <span class="letters">
+            <span class="l">L</span>
+            <span class="slash">/</span>
+            <span class="r">R</span>
+          </span>
+          <span class="cn">隐形眼镜盒</span>
+        </h1>
+        <p>拖动旋转视角 · 滚轮缩放 · <strong>点击盒盖</strong>打开或关闭</p>
+      </div>
+
+      <div class="status-row" aria-live="polite">
+        <div class="chip l" id="statusL">
+          <span class="dot"></span>
+          <span>L ·</span>
+          <span class="state">已关闭</span>
+        </div>
+        <div class="chip r" id="statusR">
+          <span class="dot"></span>
+          <span>R ·</span>
+          <span class="state">已关闭</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="bottom">
+      <div class="controls" aria-label="模型控制">
+        <button type="button" class="primary" data-action="open">全部打开</button>
+        <button type="button" data-action="close">全部关闭</button>
+        <button type="button" data-action="reset">重置视角</button>
+      </div>
+      <div class="hint">点击 L / R 盒盖 · 也可按键盘 L / R</div>
+    </div>
+
+    <div class="corner">Click the cap</div>
+  </div>
+
+  <noscript>需要启用 JavaScript 才能查看 3D 模型。</noscript>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+    const container = document.getElementById('scene');
+
+    /* ---------------------------------------------------------------------
+       Renderer / Scene / Camera
+    --------------------------------------------------------------------- */
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(
+      35,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+    camera.position.set(4.3, 4.1, 5.35);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.06;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.43, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = false;
+    controls.minDistance = 4.6;
+    controls.maxDistance = 10.5;
+    controls.minPolarAngle = 0.18;
+    controls.maxPolarAngle = Math.PI * 0.49;
+    controls.rotateSpeed = 0.65;
+    controls.zoomSpeed = 0.75;
+    controls.update();
+    controls.saveState();
+
+    /* ---------------------------------------------------------------------
+       Lighting
+    --------------------------------------------------------------------- */
+    scene.add(new THREE.HemisphereLight(0xfff8ec, 0x9bcac6, 1.9));
+
+    const keyLight = new THREE.DirectionalLight(0xfff2de, 3.4);
+    keyLight.position.set(4.6, 7.2, 4.8);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -4.5;
+    keyLight.shadow.camera.right = 4.5;
+    keyLight.shadow.camera.top = 4.5;
+    keyLight.shadow.camera.bottom = -4.5;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 20;
+    keyLight.shadow.bias = -0.0005;
+    keyLight.shadow.normalBias = 0.02;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xa9d9ff, 1.6);
+    fillLight.position.set(-5, 4.2, 3.5);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffc1cc, 2.0);
+    rimLight.position.set(-3.5, 3, -4.5);
+    scene.add(rimLight);
+
+    const accentPointL = new THREE.PointLight(0xff7c8c, 12, 7, 2);
+    accentPointL.position.set(-2.8, 1.5, 1.8);
+    scene.add(accentPointL);
+
+    const accentPointR = new THREE.PointLight(0x6eb5ff, 12, 7, 2);
+    accentPointR.position.set(2.8, 1.5, 1.8);
+    scene.add(accentPointR);
+
+    /* ---------------------------------------------------------------------
+       Shadow floor + soft contact shadow
+    --------------------------------------------------------------------- */
+    const shadowFloor = new THREE.Mesh(
+      new THREE.PlaneGeometry(30, 30),
+      new THREE.ShadowMaterial({
+        color: 0x0b3f44,
+        opacity: 0.18,
+        transparent: true
+      })
+    );
+    shadowFloor.rotation.x = -Math.PI / 2;
+    shadowFloor.position.y = -0.002;
+    shadowFloor.receiveShadow = true;
+    scene.add(shadowFloor);
+
+    function createSoftShadowTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(128, 128, 8, 128, 128, 128);
+      gradient.addColorStop(0, 'rgba(7, 52, 58, 0.27)');
+      gradient.addColorStop(0.55, 'rgba(7, 52, 58, 0.09)');
+      gradient.addColorStop(1, 'rgba(7, 52, 58, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 256, 256);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    const softShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.2, 3.6),
+      new THREE.MeshBasicMaterial({
+        map: createSoftShadowTexture(),
+        transparent: true,
+        opacity: 0.82,
+        depthWrite: false,
+        toneMapped: false
+      })
+    );
+    softShadow.rotation.x = -Math.PI / 2;
+    softShadow.position.y = -0.001;
+    softShadow.renderOrder = -1;
+    scene.add(softShadow);
+
+    /* ---------------------------------------------------------------------
+       Materials
+    --------------------------------------------------------------------- */
+    const caseMat = new THREE.MeshPhysicalMaterial({
+      color: 0x0f6a6d,
+      roughness: 0.32,
+      metalness: 0.06,
+      clearcoat: 0.85,
+      clearcoatRoughness: 0.25
+    });
+
+    const darkMat = new THREE.MeshStandardMaterial({
+      color: 0x073c41,
+      roughness: 0.48,
+      metalness: 0.12
+    });
+
+    const panelMat = new THREE.MeshPhysicalMaterial({
+      color: 0xf4ecdf,
+      roughness: 0.38,
+      metalness: 0.02,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.42
+    });
+
+    const creamMat = new THREE.MeshPhysicalMaterial({
+      color: 0xfff8ec,
+      roughness: 0.35,
+      metalness: 0.01,
+      clearcoat: 0.55,
+      clearcoatRoughness: 0.35
+    });
+
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: 0xc7a76a,
+      roughness: 0.26,
+      metalness: 0.82
+    });
+
+    const innerMat = new THREE.MeshStandardMaterial({
+      color: 0x062f35,
+      roughness: 0.55,
+      metalness: 0.05
+    });
+
+    const liquidMat = new THREE.MeshPhysicalMaterial({
+      color: 0x67d9e6,
+      roughness: 0.07,
+      metalness: 0.0,
+      transparent: true,
+      opacity: 0.6,
+      clearcoat: 1,
+      clearcoatRoughness: 0.06
+    });
+
+    const lensMat = new THREE.MeshPhysicalMaterial({
+      color: 0xc8f7ff,
+      roughness: 0.07,
+      metalness: 0.0,
+      transparent: true,
+      opacity: 0.52,
+      clearcoat: 1,
+      clearcoatRoughness: 0.04,
+      side: THREE.DoubleSide
+    });
+
+    const underMat = new THREE.MeshStandardMaterial({
+      color: 0xf8f0e4,
+      roughness: 0.7,
+      metalness: 0.02,
+      side: THREE.DoubleSide
+    });
+
+    const bubbleMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+      toneMapped: false
+    });
+
+    /* ---------------------------------------------------------------------
+       Helpers
+    --------------------------------------------------------------------- */
+    function prepareMesh(mesh, cast = true, receive = true) {
+      mesh.castShadow = cast;
+      mesh.receiveShadow = receive;
+      return mesh;
+    }
+
+    function setAnisotropy(texture) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      texture.needsUpdate = true;
+      return texture;
+    }
+
+    function makeCapTexture(letter, subtitle, accentHex) {
+      const size = 512;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      ctx.clearRect(0, 0, size, size);
+
+      /* Thin decorative circle */
+      ctx.strokeStyle = accentHex;
+      ctx.globalAlpha = 0.16;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(256, 256, 208, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      /* Main letter */
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = accentHex;
+      ctx.font = '900 292px "Arial Black", "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText(letter, 256, 222);
+
+      /* Divider line */
+      ctx.strokeStyle = '#0b3f44';
+      ctx.globalAlpha = 0.24;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(181, 350);
+      ctx.lineTo(331, 350);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      /* Subtitle */
+      ctx.fillStyle = '#0b3f44';
+      ctx.globalAlpha = 0.62;
+      ctx.font = '800 39px "Arial", "Helvetica Neue", sans-serif';
+      ctx.fillText(subtitle, 256, 412);
+      ctx.globalAlpha = 1;
+
+      return setAnisotropy(new THREE.CanvasTexture(canvas));
+    }
+
+    function makeBadgeTexture(letter, accentHex) {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      ctx.clearRect(0, 0, size, size);
+
+      ctx.strokeStyle = accentHex;
+      ctx.globalAlpha = 0.74;
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.arc(128, 128, 92, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = accentHex;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '800 112px "Arial Black", "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText(letter, 128, 138);
+
+      return setAnisotropy(new THREE.CanvasTexture(canvas));
+    }
+
+    /* ---------------------------------------------------------------------
+       Case Base
+    --------------------------------------------------------------------- */
+    const caseGroup = new THREE.Group();
+    scene.add(caseGroup);
+
+    const base = prepareMesh(
+      new THREE.Mesh(
+        new RoundedBoxGeometry(3.22, 0.44, 1.68, 10, 0.18),
+        caseMat
+      )
+    );
+    base.position.y = 0.22;
+    caseGroup.add(base);
+
+    const lowerBand = prepareMesh(
+      new THREE.Mesh(
+        new RoundedBoxGeometry(3.24, 0.06, 1.7, 6, 0.028),
+        darkMat
+      )
+    );
+    lowerBand.position.y = 0.065;
+    caseGroup.add(lowerBand);
+
+    const topPanel = prepareMesh(
+      new THREE.Mesh(
+        new RoundedBoxGeometry(2.94, 0.09, 1.48, 8, 0.035),
+        panelMat
+      )
+    );
+    topPanel.position.y = 0.44;
+    caseGroup.add(topPanel);
+
+    const divider = prepareMesh(
+      new THREE.Mesh(
+        new RoundedBoxGeometry(0.022, 0.012, 0.92, 4, 0.005),
+        trimMat
+      )
+    );
+    divider.position.set(0, 0.493, 0.08);
+    caseGroup.add(divider);
+
+    /* ---------------------------------------------------------------------
+       Wells / Lenses
+    --------------------------------------------------------------------- */
+    const wellPositions = [-0.74, 0.74];
+
+    wellPositions.forEach((x) => {
+      const well = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.47, 0.43, 0.06, 64, 1, false),
+        innerMat
+      );
+      well.position.set(x, 0.46, 0);
+      well.receiveShadow = true;
+      caseGroup.add(well);
+
+      const liquid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.405, 0.405, 0.008, 64),
+        liquidMat
+      );
+      liquid.position.set(x, 0.493, 0);
+      liquid.receiveShadow = true;
+      caseGroup.add(liquid);
+
+      const lens = new THREE.Mesh(
+        new THREE.SphereGeometry(
+          0.26,
+          48,
+          20,
+          0,
+          Math.PI * 2,
+          0,
+          Math.PI / 2
+        ),
+        lensMat
+      );
+      lens.scale.y = 0.085;
+      lens.position.set(x, 0.493, 0);
+      caseGroup.add(lens);
+
+      const wellRim = prepareMesh(
+        new THREE.Mesh(
+          new THREE.TorusGeometry(0.49, 0.026, 16, 72),
+          trimMat
+        )
+      );
+      wellRim.rotation.x = Math.PI / 2;
+      wellRim.position.set(x, 0.492, 0);
+      caseGroup.add(wellRim);
+
+      const bubbles = [
+        [-0.14, 0.12, 0.014],
+        [0.1, -0.13, 0.01],
+        [0.18, 0.05, 0.008]
+      ];
+
+      bubbles.forEach(([bx, bz, radius]) => {
+        const bubble = new THREE.Mesh(
+          new THREE.SphereGeometry(radius, 12, 8),
+          bubbleMat
+        );
+        bubble.position.set(x + bx, 0.5, bz);
+        caseGroup.add(bubble);
+      });
+    });
+
+    /* ---------------------------------------------------------------------
+       Small L / R badges on the front of the top panel
+    --------------------------------------------------------------------- */
+    function createFrontBadge(x, letter, accentHex) {
+      const texture = makeBadgeTexture(letter, accentHex);
+      const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        alphaTest: 0.02,
+        depthWrite: false,
+        toneMapped: false,
+        side: THREE.DoubleSide
+      });
+
+      const badge = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.17, 0.17),
+        material
+      );
+      badge.rotation.x = -Math.PI / 2;
+      badge.position.set(x, 0.497, 0.65);
+      badge.renderOrder = 4;
+      badge.castShadow = false;
+      badge.receiveShadow = false;
+      caseGroup.add(badge);
+    }
+
+    createFrontBadge(-0.74, 'L', '#c94c62');
+    createFrontBadge(0.74, 'R', '#2c72d8');
+
+    /* ---------------------------------------------------------------------
+       Lids
+    --------------------------------------------------------------------- */
+    const lids = [];
+
+    const lidSpecs = [
+      {
+        label: 'L',
+        x: -0.74,
+        color: 0xff7282,
+        accentHex: '#c94c62',
+        subtitle: 'LEFT'
+      },
+      {
+        label: 'R',
+        x: 0.74,
+        color: 0x4f9bff,
+        accentHex: '#2c72d8',
+        subtitle: 'RIGHT'
+      }
+    ];
+
+    function createLid(spec) {
+      const lid = {
+        label: spec.label,
+        open: false,
+        currentAngle: 0,
+        targetAngle: 0,
+        openAngle: -Math.PI * 0.57,
+        pivot: null,
+        hoverGroup: null,
+        hoverMat: null
+      };
+
+      const capMat = new THREE.MeshPhysicalMaterial({
+        color: spec.color,
+        roughness: 0.28,
+        metalness: 0.02,
+        clearcoat: 0.95,
+        clearcoatRoughness: 0.17
+      });
+
+      /* Hinge pivot */
+      const pivot = new THREE.Group();
+      pivot.position.set(spec.x, 0.59, -0.6);
+      pivot.userData.isLidPivot = true;
+      pivot.userData.lid = lid;
+      caseGroup.add(pivot);
+      lid.pivot = pivot;
+
+      /* Static hinge parts */
+      const hingeMount = prepareMesh(
+        new THREE.Mesh(
+          new RoundedBoxGeometry(0.42, 0.1, 0.16, 4, 0.03),
+          darkMat
+        )
+      );
+      hingeMount.position.set(spec.x, 0.54, -0.605);
+      caseGroup.add(hingeMount);
+
+      const hingePin = prepareMesh(
+        new THREE.Mesh(
+          new THREE.CylinderGeometry(0.033, 0.033, 0.46, 24),
+          trimMat
+        )
+      );
+      hingePin.rotation.z = Math.PI / 2;
+      hingePin.position.set(spec.x, 0.59, -0.6);
+      caseGroup.add(hingePin);
+
+      /* Bridge from hinge to cap */
+      const bridge = prepareMesh(
+        new THREE.Mesh(
+          new RoundedBoxGeometry(0.16, 0.06, 0.28, 4, 0.022),
+          capMat
+        )
+      );
+      bridge.position.set(0, -0.012, 0.15);
+      pivot.add(bridge);
+
+      /* Hinge knuckle */
+      const knuckle = prepareMesh(
+        new THREE.Mesh(
+          new THREE.CylinderGeometry(0.054, 0.054, 0.26, 24),
+          trimMat
+        )
+      );
+      knuckle.rotation.z = Math.PI / 2;
+      pivot.add(knuckle);
+
+      /* Cap group is offset from hinge, so rotation looks like a real lid opening */
+      const capGroup = new THREE.Group();
+      capGroup.position.set(0, 0, 0.6);
+      pivot.add(capGroup);
+
+      const capBody = prepareMesh(
+        new THREE.Mesh(
+          new THREE.CylinderGeometry(0.565, 0.585, 0.13, 64, 1, false),
+          capMat
+        )
+      );
+      capGroup.add(capBody);
+
+      const lowerRing = prepareMesh(
+        new THREE.Mesh(
+          new THREE.TorusGeometry(0.579, 0.009, 10, 72),
+          trimMat
+        )
+      );
+      lowerRing.rotation.x = Math.PI / 2;
+      lowerRing.position.y = -0.058;
+      capGroup.add(lowerRing);
+
+      const topEdgeRing = prepareMesh(
+        new THREE.Mesh(
+          new THREE.TorusGeometry(0.56, 0.006, 10, 72),
+          trimMat
+        )
+      );
+      topEdgeRing.rotation.x = Math.PI / 2;
+      topEdgeRing.position.y = 0.063;
+      capGroup.add(topEdgeRing);
+
+      const capDisc = prepareMesh(
+        new THREE.Mesh(
+          new THREE.CylinderGeometry(0.452, 0.452, 0.026, 64),
+          creamMat
+        )
+      );
+      capDisc.position.y = 0.078;
+      capGroup.add(capDisc);
+
+      const discRing = prepareMesh(
+        new THREE.Mesh(
+          new THREE.TorusGeometry(0.458, 0.007, 10, 72),
+          trimMat
+        )
+      );
+      discRing.rotation.x = Math.PI / 2;
+      discRing.position.y = 0.086;
+      capGroup.add(discRing);
+
+      /* Nice detail visible when the lid opens */
+      const underDisc = new THREE.Mesh(
+        new THREE.CircleGeometry(0.45, 64),
+        underMat
+      );
+      underDisc.rotation.x = Math.PI / 2;
+      underDisc.position.y = -0.067;
+      capGroup.add(underDisc);
+
+      const underRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.41, 0.005, 8, 64),
+        new THREE.MeshBasicMaterial({
+          color: 0x0b3f44,
+          transparent: true,
+          opacity: 0.22,
+          depthWrite: false,
+          toneMapped: false
+        })
+      );
+      underRing.rotation.x = Math.PI / 2;
+      underRing.position.y = -0.069;
+      capGroup.add(underRing);
+
+      /* Cap label */
+      const labelTexture = makeCapTexture(
+        spec.label,
+        spec.subtitle,
+        spec.accentHex
+      );
+
+      const labelMaterial = new THREE.MeshBasicMaterial({
+        map: labelTexture,
+        transparent: true,
+        alphaTest: 0.02,
+        depthWrite: false,
+        toneMapped: false,
+        side: THREE.DoubleSide
+      });
+
+      const capLabel = new THREE.Mesh(
+        new THREE.CircleGeometry(0.414, 64),
+        labelMaterial
+      );
+      capLabel.rotation.x = -Math.PI / 2;
+      capLabel.position.y = 0.094;
+      capLabel.renderOrder = 3;
+      capLabel.castShadow = false;
+      capLabel.receiveShadow = false;
+      capGroup.add(capLabel);
+
+      /* Small front tab */
+      const frontTab = prepareMesh(
+        new THREE.Mesh(
+          new THREE.RoundedBoxGeometry
+            ? new RoundedBoxGeometry(0.13, 0.038, 0.1, 4, 0.016)
+            : new THREE.BoxGeometry(0.13, 0.038, 0.1),
+          trimMat
+        )
+      );
+      frontTab.position.set(0, -0.007, 0.575);
+      capGroup.add(frontTab);
+
+      /* Hover glow rings: one for top, one for underside */
+      const hoverMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        toneMapped: false,
+        side: THREE.DoubleSide
+      });
+
+      const hoverGroup = new THREE.Group();
+
+      const hoverTop = new THREE.Mesh(
+        new THREE.TorusGeometry(0.516, 0.012, 10, 72),
+        hoverMat
+      );
+      hoverTop.rotation.x = Math.PI / 2;
+      hoverTop.position.y = 0.07;
+      hoverGroup.add(hoverTop);
+
+      const hoverBottom = new THREE.Mesh(
+        new THREE.TorusGeometry(0.5, 0.01, 10, 72),
+        hoverMat
+      );
+      hoverBottom.rotation.x = Math.PI / 2;
+      hoverBottom.position.y = -0.072;
+      hoverGroup.add(hoverBottom);
+
+      hoverGroup.visible = false;
+      capGroup.add(hoverGroup);
+
+      lid.hoverGroup = hoverGroup;
+      lid.hoverMat = hoverMat;
+
+      lids.push(lid);
+    }
+
+    lidSpecs.forEach(createLid);
+
+    /* ---------------------------------------------------------------------
+       Interaction
+    --------------------------------------------------------------------- */
+    const raycaster = new THREE.Raycaster();
+    const pointerNdc = new THREE.Vector2();
+
+    let hoveredLid = null;
+    let pressed = null;
+
+    const statusElements = {
+      L: document.getElementById('statusL'),
+      R: document.getElementById('statusR')
+    };
+
+    function setLidOpen(lid, open) {
+      if (!lid) return;
+
+      lid.open = open;
+      lid.targetAngle = open ? lid.openAngle : 0;
+
+      const chip = statusElements[lid.label];
+      if (chip) {
+        chip.classList.toggle('is-open', open);
+        const state = chip.querySelector('.state');
+        if (state) state.textContent = open ? '已打开' : '已关闭';
+      }
+    }
+
+    function toggleLid(lid) {
+      if (!lid) return;
+      setLidOpen(lid, !lid.open);
+    }
+
+    function lidFromPointer(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+
+      pointerNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointerNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(pointerNdc, camera);
+
+      const pivots = lids.map((lid) => lid.pivot);
+      const hits = raycaster.intersectObjects(pivots, true);
+
+      if (hits.length === 0) return null;
+
+      let node = hits[0].object;
+      while (node && !node.userData.isLidPivot) {
+        node = node.parent;
+      }
+
+      return node ? node.userData.lid : null;
+    }
+
+    function updateHoverFromPointer(event) {
+      if (event.pointerType === 'touch') return;
+      hoveredLid = lidFromPointer(event);
+      renderer.domElement.style.cursor = hoveredLid
+        ? 'pointer'
+        : pressed
+          ? 'grabbing'
+          : 'grab';
+    }
+
+    renderer.domElement.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+      pressed = {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        time: performance.now()
+      };
+
+      renderer.domElement.style.cursor = 'grabbing';
+    });
+
+    renderer.domElement.addEventListener('pointermove', updateHoverFromPointer);
+
+    renderer.domElement.addEventListener('pointerleave', () => {
+      if (!pressed) {
+        hoveredLid = null;
+        renderer.domElement.style.cursor = 'grab';
+      }
+    });
+
+    window.addEventListener('pointerup', (event) => {
+      if (!pressed || event.pointerId !== pressed.id) return;
+
+      const start = pressed;
+      pressed = null;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      const inside =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+
+      const moved = Math.hypot(
+        event.clientX - start.x,
+        event.clientY - start.y
+      );
+      const elapsed = performance.now() - start.time;
+
+      if (inside && moved < 7 && elapsed < 900) {
+        const lid = lidFromPointer(event);
+        if (lid) toggleLid(lid);
+      }
+
+      if (inside && event.pointerType !== 'touch') {
+        hoveredLid = lidFromPointer(event);
+        renderer.domElement.style.cursor = hoveredLid ? 'pointer' : 'grab';
+      } else {
+        hoveredLid = null;
+        renderer.domElement.style.cursor = 'grab';
+      }
+    });
+
+    window.addEventListener('pointercancel', () => {
+      pressed = null;
+      hoveredLid = null;
+      renderer.domElement.style.cursor = 'grab';
+    });
+
+    window.addEventListener('blur', () => {
+      pressed = null;
+      hoveredLid = null;
+      renderer.domElement.style.cursor = 'grab';
+    });
+
+    /* Keyboard controls */
+    window.addEventListener('keydown', (event) => {
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (key === 'l') {
+        event.preventDefault();
+        toggleLid(lids.find((lid) => lid.label === 'L'));
+      }
+
+      if (key === 'r') {
+        event.preventDefault();
+        toggleLid(lids.find((lid) => lid.label === 'R'));
+      }
+    });
+
+    /* UI buttons */
+    document.querySelectorAll('[data-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.action;
+
+        if (action === 'open') {
+          lids.forEach((lid) => setLidOpen(lid, true));
+        }
+
+        if (action === 'close') {
+          lids.forEach((lid) => setLidOpen(lid, false));
+        }
+
+        if (action === 'reset') {
+          controls.reset();
+          hoveredLid = null;
+          renderer.domElement.style.cursor = 'grab';
+        }
+      });
+    });
+
+    /* ---------------------------------------------------------------------
+       Resize
+    --------------------------------------------------------------------- */
+    function handleResize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(width, height);
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    /* ---------------------------------------------------------------------
+       Animation loop
+    --------------------------------------------------------------------- */
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const angleEase = 1 - Math.exp(-9 * delta);
+
+      lids.forEach((lid) => {
+        lid.currentAngle += (lid.targetAngle - lid.currentAngle) * angleEase;
+
+        if (Math.abs(lid.targetAngle - lid.currentAngle) < 0.0003) {
+          lid.currentAngle = lid.targetAngle;
+        }
+
+        lid.pivot.rotation.x = lid.currentAngle;
+
+        const targetOpacity = hoveredLid === lid ? 1 : 0;
+        lid.hoverMat.opacity +=
+          (targetOpacity - lid.hoverMat.opacity) *
+          (1 - Math.exp(-14 * delta));
+
+        lid.hoverGroup.visible = lid.hoverMat.opacity > 0.015;
+      });
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

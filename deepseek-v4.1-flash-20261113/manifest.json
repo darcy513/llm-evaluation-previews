@@ -1,0 +1,165 @@
+{
+  "campaign_id": "deepseek-v4.1-flash-20261113",
+  "model_alias": "deepseek-v4.1-flash",
+  "upstream_model": "deepseek-v4.1-flash-1017",
+  "provider": "OneAPI /v1/chat/completions (stream)",
+  "requested_reasoning_effort": "max",
+  "effective_reasoning_effort": "unconfirmed (no upstream echo)",
+  "question_bank_revision": "7f3a6f8ca05550f1c91ce6e8b55db225c108b1a0",
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "coding": {
+    "coding-c01": {
+      "status": "published",
+      "run_id": "20261113T055610603572Z-04e24592",
+      "bytes": 92080
+    },
+    "coding-c02": {
+      "status": "published",
+      "run_id": "20261113T055610603572Z-04e24592",
+      "bytes": 49960
+    },
+    "coding-c03": {
+      "status": "published",
+      "run_id": "20261113T055610603572Z-04e24592",
+      "bytes": 34795
+    },
+    "coding-c04": {
+      "status": "published",
+      "run_id": "20261113T055610603572Z-04e24592",
+      "bytes": 12483
+    },
+    "coding-c05": {
+      "status": "published",
+      "run_id": "20261113T055610603572Z-04e24592",
+      "bytes": 37305
+    },
+    "coding-c06": {
+      "status": "published",
+      "run_id": "20261113T055610603572Z-04e24592",
+      "bytes": 62351
+    },
+    "coding-c07": {
+      "status": "published",
+      "run_id": "20261113T055610603572Z-04e24592",
+      "bytes": 49764
+    },
+    "coding-c08": {
+      "status": "published",
+      "run_id": "20261113T064939307391Z-a8deaf80",
+      "bytes": 198064
+    }
+  },
+  "reasoning": {
+    "reasoning-r01": {
+      "status": "success",
+      "run_id": "20261113T055610604507Z-d362ecc9",
+      "images_sent": 0,
+      "total_seconds": 506,
+      "completion_tokens": 73667,
+      "source_answer_sha256": "7358c28fa0d92a7b8c3685fa13ca9229b31a2532d476735ece32ee9b08674863"
+    },
+    "reasoning-r02": {
+      "status": "success",
+      "run_id": "20261113T055610604507Z-d362ecc9",
+      "images_sent": 1,
+      "total_seconds": 195,
+      "completion_tokens": 28276,
+      "source_answer_sha256": "b6e18ed95edbef90163cd528dd287aa2cf1a1fc495272d95c39c2db327f6a708"
+    },
+    "reasoning-r03": {
+      "status": "success",
+      "run_id": "20261113T055012403414Z-8dbeb9cc",
+      "images_sent": 0,
+      "total_seconds": 230,
+      "completion_tokens": 36352,
+      "source_answer_sha256": "e54bcce38d2e47fdc25b9c3f2f9b63b53856b012248c76c7fca100b394a51cf1"
+    },
+    "reasoning-r04": {
+      "status": "success",
+      "run_id": "20261113T055610604507Z-d362ecc9",
+      "images_sent": 0,
+      "total_seconds": 12,
+      "completion_tokens": 1948,
+      "source_answer_sha256": "c4dae7cc13f13fdee3def746b953f391700f98e66fbb3c460eed1402aac8969a"
+    },
+    "reasoning-r05": {
+      "status": "success",
+      "run_id": "20261113T055610604507Z-d362ecc9",
+      "images_sent": 0,
+      "total_seconds": 58,
+      "completion_tokens": 9029,
+      "source_answer_sha256": "f330209116314acdde2ae558868e95d8c6a4ac97f14a4a7fc464f2fbd56da229"
+    },
+    "reasoning-r06": {
+      "status": "success",
+      "run_id": "20261113T055610604507Z-d362ecc9",
+      "images_sent": 0,
+      "total_seconds": 563,
+      "completion_tokens": 77868,
+      "source_answer_sha256": "4e0045a5e2699ab46562f596cd5bcdc6f18770a9283e449c327f9ea01a636f71"
+    },
+    "reasoning-r07": {
+      "status": "success",
+      "run_id": "20261113T055610604507Z-d362ecc9",
+      "images_sent": 0,
+      "total_seconds": 25,
+      "completion_tokens": 3363,
+      "source_answer_sha256": "b353bb3dfb38f61c9c10630bb9bee1a07727acf54b3c477fd498617ef0b25b80"
+    },
+    "reasoning-r08": {
+      "status": "success",
+      "run_id": "20261113T055610604507Z-d362ecc9",
+      "images_sent": 0,
+      "total_seconds": 288,
+      "completion_tokens": 57920,
+      "source_answer_sha256": "8bf24932e7d7dbd7e0446a222b7b6c6255060c95adb04f7bd66cf15b72b01171"
+    }
+  },
+  "multimodal": {
+    "multimodal-mm01": {
+      "status": "success",
+      "run_id": "20261113T055610640342Z-7049deb2",
+      "images_sent": 1,
+      "total_seconds": 77,
+      "completion_tokens": 11074,
+      "source_answer_sha256": "44b99580bb59408018564b4211f5a85aa15c4ea33a73698a722d7e166b22e115"
+    },
+    "multimodal-mm02": {
+      "status": "success",
+      "run_id": "20261113T055610640342Z-7049deb2",
+      "images_sent": 1,
+      "total_seconds": 305,
+      "completion_tokens": 46111,
+      "source_answer_sha256": "32774b122b6153fcafdf53e2ea3f91e7db19fb204bf22c08a6cb3216e45f9f4d"
+    },
+    "multimodal-mm03": {
+      "status": "success",
+      "run_id": "20261113T055610640342Z-7049deb2",
+      "images_sent": 1,
+      "total_seconds": 179,
+      "completion_tokens": 28226,
+      "source_answer_sha256": "7b78ba4d51e2995a8da1d04d9860906944f47f103a931725fa0681629304e1d2"
+    },
+    "multimodal-mm04": {
+      "status": "success",
+      "run_id": "20261113T055610640342Z-7049deb2",
+      "images_sent": 4,
+      "total_seconds": 72,
+      "completion_tokens": 9134,
+      "source_answer_sha256": "54e94cca5554789edf0ade94e52f708e463b6eafea80ec3c492fbac1af587ea2"
+    }
+  },
+  "retries": [
+    {
+      "prompt_id": "coding-c08",
+      "first_run": "20261113T055610603572Z-04e24592",
+      "first_result": "output_limit (131072 tokens, 113978 reasoning)",
+      "retry_run": "20261113T064939307391Z-a8deaf80",
+      "retry_change": "max_tokens 393216",
+      "retry_result": "success, finish_reason=stop, 178479 tokens"
+    }
+  ],
+  "known_runtime_errors": {
+    "coding-c03": "THREE.RoundedBoxGeometry is not a constructor (model code, not repaired)"
+  }
+}

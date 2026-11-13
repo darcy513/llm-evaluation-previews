@@ -1,0 +1,17 @@
+{
+  "campaign_id": "deepseek-v4.1-flash-20261113",
+  "item_id": "coding-c03",
+  "model_alias": "deepseek-v4.1-flash",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "fa6486b7806e43f7d2cf18a31f1df3985b8a5225e5a152a800fa3181cb25bedd",
+  "source_answer_sha256": "42c8d5a59c7670efa59c86ae60af1ac53da192901f33534fd0d2f13432a4338a",
+  "source_run_id": "20261113T055610603572Z-04e24592",
+  "source_request_id": "bfaa6d1fa78546c2922f3eaf4951bb2c",
+  "external_urls": [
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "runtime_note": "Model code throws 'THREE.RoundedBoxGeometry is not a constructor' at line 1047 while building the lid; animation and lid click do not run. Not repaired."
+}
