@@ -1,0 +1,193 @@
+{
+  "batch_id": "agent-suite-hy4-20261113",
+  "model": "hy4",
+  "provider": "Tencent TokenHub (China site)",
+  "benchmark_version": "agent-suite-v1.1-tool-errors-noleak",
+  "requested_reasoning_effort": "max",
+  "effective_reasoning_effort": "unconfirmed (no upstream echo)",
+  "status": "draft",
+  "formal_score_updated": false,
+  "valid_tasks": 8,
+  "technical_failures": 0,
+  "average_weighted_score": 91.184,
+  "strict_pass": 5,
+  "tasks": [
+    {
+      "task_id": "T01",
+      "task_name": "benchmark.t01_refund_processing",
+      "label": "退款处理",
+      "weighted_score": 100.0,
+      "strict_pass": true,
+      "assertions_passed": 10,
+      "assertions_total": 10,
+      "technical_errors": [],
+      "failed_assertions": [],
+      "num_model_calls": 5,
+      "num_tool_calls": 24,
+      "task_contract_sha256": "4c9b1ed38cadbbd8e0159f9b072feb9dc4c4edcf77eb0c86b635aec03079efd1"
+    },
+    {
+      "task_id": "T02",
+      "task_name": "benchmark.t02_demo_scheduling",
+      "label": "Demo 排期",
+      "weighted_score": 100.0,
+      "strict_pass": true,
+      "assertions_passed": 8,
+      "assertions_total": 8,
+      "technical_errors": [],
+      "failed_assertions": [],
+      "num_model_calls": 5,
+      "num_tool_calls": 12,
+      "task_contract_sha256": "aa2fb035bcb207158ccc3b4031af1ed706c086451112eec86673b65ddd5c9b87"
+    },
+    {
+      "task_id": "T03",
+      "task_name": "benchmark.t03_disney_trip_planning",
+      "label": "Disney 三日旅行规划",
+      "weighted_score": 60.0,
+      "strict_pass": false,
+      "assertions_passed": 6,
+      "assertions_total": 8,
+      "technical_errors": [],
+      "failed_assertions": [
+        {
+          "type": "benchmark_travel_checks",
+          "points": 30.0,
+          "params": {
+            "points": 30,
+            "required": [
+              "budget",
+              "budget_breakdown",
+              "complete_days",
+              "no_park_hopper",
+              "frozen",
+              "star_wars",
+              "slow_pace",
+              "family_meal",
+              "early_end",
+              "cancelable"
+            ]
+          }
+        },
+        {
+          "type": "benchmark_data_equals",
+          "points": 10.0,
+          "params": {
+            "points": 10,
+            "path": "travel.plan.finalized",
+            "value": true
+          }
+        }
+      ],
+      "num_model_calls": 50,
+      "num_tool_calls": 71,
+      "task_contract_sha256": "49bb7f06f643f4e91287ff7351ed9341876ec3f95e1cf67c2123c8d287dfd44c"
+    },
+    {
+      "task_id": "T04",
+      "task_name": "benchmark.t04_openrouter_analysis",
+      "label": "OpenRouter 数据采集与分析",
+      "weighted_score": 100.0,
+      "strict_pass": true,
+      "assertions_passed": 10,
+      "assertions_total": 10,
+      "technical_errors": [],
+      "failed_assertions": [],
+      "num_model_calls": 50,
+      "num_tool_calls": 110,
+      "task_contract_sha256": "51e09e0e741250452001520b65757cd5528f43c4838445750ebfbd4c8e1fc8bb"
+    },
+    {
+      "task_id": "T05",
+      "task_name": "benchmark.t05_multi_file_analysis",
+      "label": "多文件分析与报告生成",
+      "weighted_score": 100.0,
+      "strict_pass": true,
+      "assertions_passed": 10,
+      "assertions_total": 10,
+      "technical_errors": [],
+      "failed_assertions": [],
+      "num_model_calls": 28,
+      "num_tool_calls": 42,
+      "task_contract_sha256": "5b3968e9efc0b747ec082c26d1a87f05dbab8e781f7b20b99414efaa164a7288"
+    },
+    {
+      "task_id": "T06",
+      "task_name": "benchmark.t06_project_delay",
+      "label": "项目延期处理",
+      "weighted_score": 80.0,
+      "strict_pass": false,
+      "assertions_passed": 7,
+      "assertions_total": 8,
+      "technical_errors": [],
+      "failed_assertions": [
+        {
+          "type": "benchmark_project_task_updates_valid",
+          "points": 20.0,
+          "params": {
+            "points": 20,
+            "expected": {
+              "component": {
+                "due_date": "2026-08-27",
+                "status": "DELAYED"
+              },
+              "integration": {
+                "due_date": "2026-08-31",
+                "status": "AT_RISK"
+              },
+              "qa": {
+                "due_date": "2026-09-04",
+                "status": "AT_RISK"
+              }
+            }
+          }
+        }
+      ],
+      "num_model_calls": 4,
+      "num_tool_calls": 8,
+      "task_contract_sha256": "d7faff3fd0355d87ccec8061e90ad730c1fcd3af9ff73dd674d93606f59bcf22"
+    },
+    {
+      "task_id": "T07",
+      "task_name": "benchmark.t07_banking_multi_turn",
+      "label": "银行场景多轮任务",
+      "weighted_score": 100.0,
+      "strict_pass": true,
+      "assertions_passed": 10,
+      "assertions_total": 10,
+      "technical_errors": [],
+      "failed_assertions": [],
+      "num_model_calls": 11,
+      "num_tool_calls": 25,
+      "task_contract_sha256": "92a3ba35e18515df0f50db5ce71ac3e692535a00bdb200935924aa5e8ded8ab5"
+    },
+    {
+      "task_id": "T08",
+      "task_name": "benchmark.t08_invoice_interrupt_resume",
+      "label": "发票中断后恢复执行",
+      "weighted_score": 89.47368421052632,
+      "strict_pass": false,
+      "assertions_passed": 6,
+      "assertions_total": 7,
+      "technical_errors": [],
+      "failed_assertions": [
+        {
+          "type": "benchmark_action_ids_equal",
+          "points": 10.0,
+          "params": {
+            "points": 10,
+            "kind": "invoice_vendor_email",
+            "id_key": "invoice_id",
+            "expected": [
+              "INV-802",
+              "INV-803"
+            ]
+          }
+        }
+      ],
+      "num_model_calls": 8,
+      "num_tool_calls": 11,
+      "task_contract_sha256": "73753685f9867f90e5c399ac0cb6f4f565f74ccc3f24d377294cf6a3abace47d"
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "campaign_id": "hy4-20261113",
+  "model_alias": "hy4",
+  "upstream_model": "hy4",
+  "provider": "Tencent TokenHub /v1/chat/completions (stream)",
+  "requested_reasoning_effort": "max",
+  "effective_reasoning_effort": "unconfirmed (no upstream echo)",
+  "question_bank_revision": "7f3a6f8ca05550f1c91ce6e8b55db225c108b1a0",
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "coding": {
+    "coding-c01": {
+      "status": "published",
+      "run_id": "20261113T080016431261Z-02caf009",
+      "bytes": 14962
+    },
+    "coding-c02": {
+      "status": "published",
+      "run_id": "20261113T080016433007Z-90157978",
+      "bytes": 13108
+    },
+    "coding-c03": {
+      "status": "published",
+      "run_id": "20261113T080016432770Z-08e8826b",
+      "bytes": 12828
+    },
+    "coding-c04": {
+      "status": "published",
+      "run_id": "20261113T080016431265Z-cb14505c",
+      "bytes": 8913
+    },
+    "coding-c05": {
+      "status": "published",
+      "run_id": "20261113T080307980564Z-1f51b403",
+      "bytes": 13271
+    },
+    "coding-c06": {
+      "status": "published",
+      "run_id": "20261113T080310978454Z-5e398a5b",
+      "bytes": 13001
+    },
+    "coding-c07": {
+      "status": "published",
+      "run_id": "20261113T080350871242Z-ff7aec26",
+      "bytes": 23222
+    },
+    "coding-c08": {
+      "status": "published",
+      "run_id": "20261113T080437007146Z-15d5206a",
+      "bytes": 91583
+    }
+  },
+  "reasoning": {
+    "reasoning-r01": {
+      "status": "success",
+      "run_id": "20261113T081622630235Z-e0df198f",
+      "images_sent": 0,
+      "total_seconds": 775,
+      "completion_tokens": 48131,
+      "source_answer_sha256": "3b56cb4d3640f98a98061b1fa4749f79a6af185cb2e7f54c6640a18ada3538d4"
+    },
+    "reasoning-r02": {
+      "status": "success",
+      "run_id": "20261113T081638040333Z-e53385e3",
+      "images_sent": 1,
+      "total_seconds": 532,
+      "completion_tokens": 30209,
+      "source_answer_sha256": "13dbbb288c303b738bda6b058b96e57ef031913b8307befb9d43f7bd1bfe9aab"
+    },
+    "reasoning-r03": {
+      "status": "success",
+      "run_id": "20261113T073433665370Z-9b27c0a9",
+      "images_sent": 0,
+      "total_seconds": 806,
+      "completion_tokens": 45706,
+      "source_answer_sha256": "edef4c71cb6d43cd237c1de966cbdb6dfcb488825b8c1aebe4e2658329d36c67"
+    },
+    "reasoning-r04": {
+      "status": "success",
+      "run_id": "20261113T081844514155Z-6a51f194",
+      "images_sent": 0,
+      "total_seconds": 34,
+      "completion_tokens": 1894,
+      "source_answer_sha256": "5ef811c79d4c09883466e7e6885f5a14ba18fd501025b7839c8c524faded0694"
+    },
+    "reasoning-r05": {
+      "status": "success",
+      "run_id": "20261113T081919114111Z-bd131d6b",
+      "images_sent": 0,
+      "total_seconds": 347,
+      "completion_tokens": 16995,
+      "source_answer_sha256": "b63d9c6283228459de97ca633a175ffd760992622c471bfdf47c63411b762e88"
+    },
+    "reasoning-r06": {
+      "status": "success",
+      "run_id": "20261113T082506618007Z-2963c337",
+      "images_sent": 0,
+      "total_seconds": 913,
+      "completion_tokens": 56049,
+      "source_answer_sha256": "10d0fc496b4d742453ee62342f3f8f40fba6f2fc5f044df70fe68ef1eac7fdee"
+    },
+    "reasoning-r07": {
+      "status": "success",
+      "run_id": "20261113T082530750417Z-ad1c8df6",
+      "images_sent": 0,
+      "total_seconds": 190,
+      "completion_tokens": 9085,
+      "source_answer_sha256": "23d600f63094f4c68edc18e666c506a79944ed857f08e50bacee6f73c6f05236"
+    },
+    "reasoning-r08": {
+      "status": "success",
+      "run_id": "20261113T082841246342Z-098e51ae",
+      "images_sent": 0,
+      "total_seconds": 746,
+      "completion_tokens": 39982,
+      "source_answer_sha256": "bf0d218fea86cca950b6bec5c33991e119c166ba3c4b4cd0551c033120867948"
+    }
+  },
+  "multimodal": {
+    "multimodal-mm01": {
+      "status": "success",
+      "run_id": "20261113T080550155665Z-3b43b777",
+      "images_sent": 1,
+      "total_seconds": 774,
+      "completion_tokens": 46061,
+      "source_answer_sha256": "d125d35bfab6ae2af3a7c9eebe9280b4cddcc00b0ec56e07e1b1eb41fcd9e044"
+    },
+    "multimodal-mm02": {
+      "status": "success",
+      "run_id": "20261113T080733748076Z-2016644e",
+      "images_sent": 1,
+      "total_seconds": 1566,
+      "completion_tokens": 40152,
+      "source_answer_sha256": "9a30227f1b1a68a9a71c0e65e720205b05dadfac5949ad740e8e75554983d5af"
+    },
+    "multimodal-mm03": {
+      "status": "success",
+      "run_id": "20261113T080959602619Z-bd0eb5fe",
+      "images_sent": 1,
+      "total_seconds": 344,
+      "completion_tokens": 18128,
+      "source_answer_sha256": "1840943c200a79305388daafdb61e5fe4e7b29a7826bb108b00bdd2516f1ede4"
+    },
+    "multimodal-mm04": {
+      "status": "success",
+      "run_id": "20261113T081543832909Z-eb420450",
+      "images_sent": 4,
+      "total_seconds": 54,
+      "completion_tokens": 1990,
+      "source_answer_sha256": "2d27a92bdc2abc1033f3c8600fa3680df10fac3329b2d2b1cb0754f72ce3927f"
+    }
+  },
+  "retries": [],
+  "known_runtime_errors": {
+    "coding-c05": "Model code: inside animate(), local `const uS/uM` shadow the UTC hand meshes of the same name, so `uM.rotation.y = ...` throws `Cannot set properties of undefined (setting 'y')` every frame before renderer.render; the dial does not update. Not repaired.",
+    "coding-c07": "Earth day/night textures load from unpkg.com and are blocked by CORS when served from another origin; the globe renders without those textures. Not repaired."
+  },
+  "interrupted_runs": [
+    "coding-c01..c04 first runs at 2026-11-13 15:49 CST were killed by the tool session (empty results, not model/API failures); reran successfully"
+  ]
+}

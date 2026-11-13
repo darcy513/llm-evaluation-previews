@@ -1,0 +1,19 @@
+{
+  "campaign_id": "hy4-20261113",
+  "item_id": "coding-c07",
+  "model_alias": "hy4",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "7b8cccf3cab2efd3e5f639c0db38062ac9ce691be3b2c750fcd0962ecbd6e479",
+  "source_answer_sha256": "063112a7ad4c9fc96236c54d8b1c018fe1a9da0c3a375b5a1080f9c670696ec1",
+  "source_run_id": "20261113T080350871242Z-ff7aec26",
+  "source_request_id": "a61a406274084af2b21a1424d31e8467",
+  "external_urls": [
+    "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "https://unpkg.com/three@0.160.0/examples/textures/planets/earth_atmos_2048.jpg",
+    "https://unpkg.com/three@0.160.0/examples/textures/planets/earth_lights_2048.png"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "runtime_note": "Earth day/night textures load from unpkg.com and are blocked by CORS when served from another origin; the globe renders without those textures. Not repaired."
+}

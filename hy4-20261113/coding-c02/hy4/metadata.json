@@ -1,0 +1,13 @@
+{
+  "campaign_id": "hy4-20261113",
+  "item_id": "coding-c02",
+  "model_alias": "hy4",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "653bd96b544ad18bb81e72567fab9a0bdbf839c19b27fe05a6990439326701e6",
+  "source_answer_sha256": "a196c1d00b9bf5a31c0d33f5e25574b70365a9efab045c377137eca42a6ac0ef",
+  "source_run_id": "20261113T080016433007Z-90157978",
+  "source_request_id": "9913f2592d0f4d4597f38cb3541000af",
+  "external_urls": [],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

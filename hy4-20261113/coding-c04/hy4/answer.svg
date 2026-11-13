@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%" role="img" aria-labelledby="t d">
+  <title id="t">长颈鹿开迷你小车</title>
+  <desc id="d">戴围巾的长颈鹿驾驶红色敞篷玩具车向右飞驰：车轮旋转、路面倒退、车身颠簸、脖子与围巾迎风摆动、尾气冒泡、云朵平移。纯 CSS 动画，无 JS、无外部依赖。</desc>
+
+  <style><![CDATA[
+    /* ===== 速度基准：轮 0.35s/圈 ≈ 359px/s，路面 80px 周期 → 0.22s ===== */
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes roadMove { to { stroke-dashoffset: 80; } }
+    @keyframes bounce   { 0%,100% { transform: translateY(0); }   50% { transform: translateY(-3px); } }
+    @keyframes bob      { 0%,100% { transform: rotate(2deg); }     50% { transform: rotate(-4deg); } }
+    @keyframes flap     { 0%,100% { transform: rotate(0deg); }     50% { transform: rotate(13deg); } }
+    @keyframes puff     { 0%   { transform: translate(0,0) scale(.5); opacity:.85; }
+                          100% { transform: translate(-42px,-26px) scale(1.9); opacity:0; } }
+    @keyframes cloudMove{ from { transform: translateX(860px); } to { transform: translateX(-160px); } }
+    @keyframes pulse    { 0%,100% { transform: scale(1); opacity:.30; }
+                          50%    { transform: scale(1.09); opacity:.48; } }
+
+    .vehicle  { animation: bounce .44s ease-in-out infinite; }
+    .wheel    { animation: spin .35s linear infinite; }
+    .road     { animation: roadMove .22s linear infinite; }
+    .neck     { animation: bob .66s ease-in-out infinite; }
+    .scarf    { animation: flap .22s ease-in-out infinite; }
+    .puff     { animation: puff .85s ease-out infinite; }
+    .p2       { animation-delay: .28s; }
+    .p3       { animation-delay: .56s; }
+    .c1       { animation: cloudMove 14s linear infinite; }
+    .c2       { animation: cloudMove 20s linear infinite -8s; }
+    .glow     { animation: pulse 3s ease-in-out infinite; }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; }
+    }
+  ]]></style>
+
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#70a1ff"/>
+      <stop offset="100%" stop-color="#dff9fb"/>
+    </linearGradient>
+    <path id="cloudShape" d="M 0 25 Q 12 2 32 8 Q 48 -8 65 8 Q 85 2 85 25 Z" fill="#ffffff" opacity=".92"/>
+  </defs>
+
+  <!-- 天空 / 太阳 / 云 -->
+  <rect width="800" height="500" fill="url(#sky)"/>
+  <circle cx="700" cy="100" r="62" fill="#ffa502" class="glow" style="transform-origin:700px 100px"/>
+  <circle cx="700" cy="100" r="44" fill="#ffa502" opacity=".85"/>
+  <g class="c1"><use href="#cloudShape" x="0" y="70"/></g>
+  <g class="c2"><g transform="translate(0,150) scale(.65)"><use href="#cloudShape"/></g></g>
+
+  <!-- 草地 / 马路 -->
+  <rect y="390" width="800" height="110" fill="#a8e063"/>
+  <rect y="430" width="800" height="70"  fill="#57606f"/>
+  <rect y="430" width="800" height="4"  fill="#7bed9f" opacity=".6"/>
+  <line x1="0" y1="465" x2="800" y2="465" stroke="#f1f2f6" stroke-width="6"
+        stroke-dasharray="40 40" class="road"/>
+
+  <!-- ============ 整车（含颠簸） ============ -->
+  <g class="vehicle">
+
+    <!-- 尾气（在车后，先画） -->
+    <g class="puff p1" style="transform-origin:328px 395px"><circle cx="328" cy="395" r="5" fill="#dfe4ea"/></g>
+    <g class="puff p2" style="transform-origin:328px 395px"><circle cx="328" cy="395" r="5" fill="#dfe4ea"/></g>
+    <g class="puff p3" style="transform-origin:328px 395px"><circle cx="328" cy="395" r="5" fill="#dfe4ea"/></g>
+    <rect x="330" y="391" width="12" height="7" rx="2.5" fill="#7f8fa6"/>
+
+    <!-- 长颈鹿身子（被车身自然遮挡） -->
+    <ellipse cx="425" cy="356" rx="29" ry="23" fill="#f5b041"/>
+    <polygon points="414,344 425,341 429,352 418,356" fill="#d68910"/>
+
+    <!-- 车身 -->
+    <path d="M 338 400 L 338 376 Q 338 360 353 358 L 477 358 Q 492 360 492 376
+             L 492 400 Q 492 410 482 410 L 348 410 Q 338 410 338 400 Z" fill="#ff4757"/>
+    <path d="M 415 361 L 415 406 M 415 376 L 466 376" stroke="#c0392b" stroke-width="2" fill="none"/>
+    <rect x="440" y="371" width="13" height="4.5" rx="2" fill="#2f3542"/>
+    <circle cx="488" cy="380" r="6.5" fill="#f1c40f" stroke="#f39c12" stroke-width="2"/>
+    <circle cx="342" cy="380" r="4.5" fill="#e84118"/>
+    <rect x="486" y="396" width="13" height="8" rx="1.5" fill="#7f8fa6"/>
+    <rect x="487" y="397" width="11" height="6.5" rx="1" fill="#ecf0f1"/>
+    <text x="492.5" y="402.2" font-size="5" font-weight="bold" font-family="sans-serif"
+          fill="#2f3542" text-anchor="middle">GIRF</text>
+
+    <!-- 挡风玻璃 + 框架 -->
+    <polygon points="354,358 348,374 372,374 372,358" fill="#70a1ff" opacity=".45"/>
+    <path d="M 356 358 L 346 376" stroke="#2f3542" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- 方向盘 + 握着它的小蹄子 -->
+    <circle cx="388" cy="354" r="13" fill="none" stroke="#2f3542" stroke-width="3.5"/>
+    <line x1="388" y1="354" x2="376" y2="354" stroke="#2f3542" stroke-width="2.5"/>
+    <line x1="388" y1="354" x2="396" y2="362" stroke="#2f3542" stroke-width="2.5"/>
+    <path d="M 428 348 Q 405 342 394 352" stroke="#f5b041" stroke-width="11"
+          stroke-linecap="round" fill="none"/>
+    <circle cx="393" cy="352" r="5.5" fill="#a04000"/>
+
+    <!-- 车轮（覆盖在车身上，玩具感） -->
+    <g class="wheel" style="transform-origin:380px 410px">
+      <circle cx="380" cy="410" r="20" fill="#2f3542"/>
+      <circle cx="380" cy="410" r="10" fill="#dfe4ea"/>
+      <path d="M 380 392 V 428 M 362 410 H 398" stroke="#7f8fa6" stroke-width="3"/>
+      <circle cx="380" cy="410" r="3.5" fill="#2f3542"/>
+    </g>
+    <g class="wheel" style="transform-origin:460px 410px">
+      <circle cx="460" cy="410" r="20" fill="#2f3542"/>
+      <circle cx="460" cy="410" r="10" fill="#dfe4ea"/>
+      <path d="M 460 392 V 428 M 442 410 H 478" stroke="#7f8fa6" stroke-width="3"/>
+      <circle cx="460" cy="410" r="3.5" fill="#2f3542"/>
+    </g>
+
+    <!-- ========== 上半身：迎风轻摆 ========== -->
+    <g class="neck" style="transform-origin:420px 352px">
+
+      <!-- 鬃毛（脖子左后侧） -->
+      <path d="M 406 195 L 399 215 L 406 235 L 399 255 L 406 275 L 399 295
+               L 406 315 L 399 335 L 406 352"
+            stroke="#a04000" stroke-width="5.5" fill="none"
+            stroke-linejoin="round" stroke-linecap="round"/>
+
+      <!-- 围巾飘带（在脖子后面） -->
+      <g class="scarf" style="transform-origin:404px 210px">
+        <path d="M 404 208 Q 370 194 344 214 Q 360 209 375 220 Q 390 229 404 216 Z" fill="#c0392b"/>
+      </g>
+
+      <!-- 脖子 -->
+      <rect x="405" y="178" width="30" height="182" rx="14" fill="#f5b041"/>
+      <polygon points="408,222 418,216 422,231 410,236" fill="#d68910"/>
+      <polygon points="425,256 433,261 428,276 418,271" fill="#d68910"/>
+      <polygon points="408,296 420,291 422,306 412,313" fill="#d68910"/>
+      <polygon points="425,326 433,331 430,346 420,341" fill="#d68910"/>
+
+      <!-- 围巾领结 -->
+      <path d="M 402 204 Q 420 215 436 203 L 436 215 Q 420 227 402 215 Z" fill="#e74c3c"/>
+      <path d="M 404 207 Q 420 216 434 206" stroke="#c0392b" stroke-width="1.5" fill="none"/>
+
+      <!-- 耳朵 -->
+      <path d="M 398 165 Q 374 154 385 179 Q 392 175 399 172 Z"
+            fill="#f5b041" stroke="#d68910" stroke-width="1.5"/>
+
+      <!-- 头 / 口鼻 -->
+      <ellipse cx="418" cy="175" rx="30" ry="19" fill="#f5b041" transform="rotate(-5 418 175)"/>
+      <polygon points="404,168 412,165 414,174 406,176" fill="#d68910"/>
+      <ellipse cx="442" cy="182" rx="20" ry="13" fill="#e67e22" transform="rotate(-5 442 182)"/>
+      <circle cx="452" cy="178" r="2.5" fill="#5d4037"/>
+      <path d="M 440 188 Q 448 194 455 186" stroke="#5d4037" stroke-width="2"
+            fill="none" stroke-linecap="round"/>
+
+      <!-- 眼睛 + 眉毛 -->
+      <path d="M 421 160 Q 428 156 434 160" stroke="#5d4037" stroke-width="2"
+            fill="none" stroke-linecap="round"/>
+      <circle cx="428" cy="168" r="4.2" fill="#fff"/>
+      <circle cx="429" cy="168" r="2.6" fill="#3e2723"/>
+      <circle cx="430" cy="167" r="1"   fill="#fff"/>
+
+      <!-- 角（ossicones） -->
+      <path d="M 408 158 L 404 138" stroke="#f5b041" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="404" cy="137" r="5.5" fill="#a04000"/>
+      <path d="M 422 157 L 420 136" stroke="#f5b041" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="420" cy="135" r="5.5" fill="#a04000"/>
+
+    </g>
+  </g>
+
+  <!-- 前景几根草，强化速度感 -->
+  <g stroke="#7bed9f" stroke-width="3" stroke-linecap="round" opacity=".8">
+    <path d="M 120 430 q -6 -12 -14 -14 M 120 430 q 4 -10 12 -12"/>
+    <path d="M 640 430 q -6 -12 -14 -14 M 640 430 q 4 -10 12 -12"/>
+  </g>
+</svg>

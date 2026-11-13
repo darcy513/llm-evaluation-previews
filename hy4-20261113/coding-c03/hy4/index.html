@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 隐形眼镜盒 - Three.js</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: #f4f7f9;
+            -webkit-font-smoothing: antialiased;
+        }
+        #ui {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 18px 22px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 8px 32px rgba(31, 45, 61, 0.1);
+            pointer-events: none;
+            user-select: none;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 18px; color: #1a2b3c; letter-spacing: 0.5px; }
+        p { margin: 6px 0 0 0; font-size: 13px; color: #5a6b7c; line-height: 1.6; }
+        .badge {
+            display: inline-block;
+            padding: 1px 7px;
+            border-radius: 5px;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 2px;
+        }
+        .badge.l { background: #1e88e5; }
+        .badge.r { background: #e53935; }
+        .hint { margin-top: 12px; font-size: 12px; color: #8a9baa; }
+    </style>
+
+    <!-- 使用 Import Map 引入 Three.js (无需构建工具) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="ui">
+        <h1>👓 隐形眼镜盒</h1>
+        <p>点击 <span class="badge l">L</span> 或 <span class="badge r">R</span> 盒盖即可打开 / 关闭</p>
+        <p class="hint">💡 拖拽旋转视角 · 滚轮缩放 · 打开后可见内部镜片</p>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        /* ---------------- 1. 基础场景 ---------------- */
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf4f7f9);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 4.5, 6.8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.target.set(0, 0.15, 0);
+        controls.minDistance = 4;
+        controls.maxDistance = 12;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; // 禁止钻到地面以下
+
+        /* ---------------- 2. 灯光与地面 ---------------- */
+        scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.6);
+        mainLight.position.set(4, 8, 5);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.set(2048, 2048);
+        mainLight.shadow.camera.near = 0.5;
+        mainLight.shadow.camera.far = 20;
+        mainLight.shadow.camera.left = -6;
+        mainLight.shadow.camera.right = 6;
+        mainLight.shadow.camera.top = 6;
+        mainLight.shadow.camera.bottom = -6;
+        mainLight.shadow.bias = -0.0005;
+        scene.add(mainLight);
+
+        const fillLight = new THREE.DirectionalLight(0xb3d9ff, 0.5);
+        fillLight.position.set(-5, 3, -4);
+        scene.add(fillLight);
+
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(30, 30),
+            new THREE.ShadowMaterial({ opacity: 0.13 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.4;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        /* ---------------- 3. 动态生成醒目 L / R 纹理 ---------------- */
+        function createCapTexture(letter, bgColor) {
+            const size = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, size, size);
+
+            // 内圈压纹细节
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, size / 2 - 26, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 醒目的粗体标识
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 340px system-ui, "Arial Black", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.22)';
+            ctx.shadowBlur = 14;
+            ctx.shadowOffsetY = 10;
+            ctx.fillText(letter, size / 2, size / 2 + 18);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            return tex;
+        }
+
+        /* ---------------- 4. 构建盒身 (无 CSG 的空心结构) ---------------- */
+        const baseMat = new THREE.MeshPhysicalMaterial({
+            color: 0xf0f4f8, roughness: 0.32,
+            clearcoat: 0.85, clearcoatRoughness: 0.15,
+            side: THREE.DoubleSide
+        });
+        const wellMat = new THREE.MeshStandardMaterial({
+            color: 0xcbd5df, roughness: 0.75, side: THREE.DoubleSide
+        });
+
+        function createCompartment(xPos) {
+            const g = new THREE.Group();
+            g.position.x = xPos;
+
+            // 外壁 (开口圆柱)
+            const outer = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.8, 64, 1, true), baseMat);
+            g.add(outer);
+
+            // 底面
+            const bottom = new THREE.Mesh(new THREE.CircleGeometry(1, 64), baseMat);
+            bottom.rotation.x = -Math.PI / 2; bottom.position.y = -0.4;
+            g.add(bottom);
+
+            // 顶部圆环 (形成盒口边缘)
+            const rim = new THREE.Mesh(new THREE.RingGeometry(0.82, 1, 64), baseMat);
+            rim.rotation.x = -Math.PI / 2; rim.position.y = 0.4;
+            g.add(rim);
+
+            // 内仓壁
+            const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.82, 0.68, 64, 1, true), wellMat);
+            inner.position.y = 0.06;
+            g.add(inner);
+
+            // 内仓底
+            const wellBottom = new THREE.Mesh(new THREE.CircleGeometry(0.82, 64), wellMat);
+            wellBottom.rotation.x = -Math.PI / 2; wellBottom.position.y = -0.28;
+            g.add(wellBottom);
+
+            return g;
+        }
+
+        const baseGroup = new THREE.Group();
+        baseGroup.add(createCompartment(-1.1), createCompartment(1.1));
+
+        // 中间连接腰身 (巧妙内收，不穿出圆弧、不挡住内仓)
+        const connector = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.2), baseMat);
+        baseGroup.add(connector);
+
+        // 内部隐形镜片 (打开后的小惊喜)
+        const lensGeo = new THREE.SphereGeometry(0.6, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.2);
+        lensGeo.scale(1, 0.22, 1);
+        const mkLens = (x, color) => {
+            const m = new THREE.Mesh(lensGeo, new THREE.MeshPhysicalMaterial({
+                color, transparent: true, opacity: 0.65, transmission: 0.85,
+                roughness: 0.1, side: THREE.DoubleSide
+            }));
+            m.position.set(x, -0.18, 0);
+            baseGroup.add(m);
+        };
+        mkLens(-1.1, 0x29b6f6);
+        mkLens(1.1, 0xf06292);
+
+        baseGroup.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+        scene.add(baseGroup);
+
+        /* ---------------- 5. 构建盒盖 ---------------- */
+        const capGeo = new THREE.CylinderGeometry(1.05, 1.05, 0.35, 64);
+        const gripGeo = new THREE.TorusGeometry(1.05, 0.025, 8, 64);
+
+        function createCap(id, x, sideColor, topColor, darkColor) {
+            const mats = [
+                new THREE.MeshStandardMaterial({ color: sideColor, roughness: 0.3, metalness: 0.05 }), // 侧面
+                new THREE.MeshStandardMaterial({ map: createCapTexture(id, topColor), roughness: 0.3, metalness: 0.05 }), // 顶面
+                new THREE.MeshStandardMaterial({ color: darkColor, roughness: 0.5 })  // 底面
+            ];
+            const cap = new THREE.Mesh(capGeo, mats);
+            cap.position.set(x, 1.5, 0); // 初始悬空，加载时自动平滑落下
+            cap.castShadow = true;
+            cap.userData = { id, isOpen: false };
+
+            const grip = new THREE.Mesh(gripGeo, new THREE.MeshStandardMaterial({ color: darkColor }));
+            grip.rotation.x = Math.PI / 2;
+            grip.position.y = -0.15;
+            cap.add(grip);
+
+            scene.add(cap);
+            return cap;
+        }
+
+        const capL = createCap('L', -1.1, 0x1e88e5, '#1e88e5', 0x1565c0);
+        const capR = createCap('R',  1.1, 0xe53935, '#e53935', 0xc62828);
+
+        /* ---------------- 6. 开合动画目标 ---------------- */
+        const targets = {
+            L: {
+                closed: { p: new THREE.Vector3(-1.1, 0.575, 0), r: new THREE.Euler(0, 0, 0) },
+                open:   { p: new THREE.Vector3(-2.35, 0.95, 0.6), r: new THREE.Euler(0.18, 0, Math.PI / 6) }
+            },
+            R: {
+                closed: { p: new THREE.Vector3(1.1, 0.575, 0), r: new THREE.Euler(0, 0, 0) },
+                open:   { p: new THREE.Vector3(2.35, 0.95, 0.6), r: new THREE.Euler(0.18, 0, -Math.PI / 6) }
+            }
+        };
+
+        /* ---------------- 7. 点击交互 (区分拖拽与点击) ---------------- */
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const pointerDown = new THREE.Vector2();
+
+        const updateMouse = e => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        };
+
+        renderer.domElement.addEventListener('pointerdown', e => pointerDown.set(e.clientX, e.clientY));
+
+        renderer.domElement.addEventListener('pointerup', e => {
+            // 若移动超过 5px 则视为 OrbitControls 拖拽，不触发开合
+            if (Math.hypot(e.clientX - pointerDown.x, e.clientY - pointerDown.y) > 5) return;
+
+            updateMouse(e);
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects([capL, capR], true);
+            if (hits.length) {
+                let obj = hits[0].object;
+                while (obj && !obj.userData.id) obj = obj.parent; // 兼容点到防滑圈的情况
+                if (obj) obj.userData.isOpen = !obj.userData.isOpen;
+            }
+        });
+
+        renderer.domElement.addEventListener('pointermove', e => {
+            updateMouse(e);
+            raycaster.setFromCamera(mouse, camera);
+            document.body.style.cursor = raycaster.intersectObjects([capL, capR], true).length ? 'pointer' : 'default';
+        });
+
+        /* ---------------- 8. 渲染循环 ---------------- */
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            [capL, capR].forEach(cap => {
+                const t = cap.userData.isOpen ? targets[cap.userData.id].open : targets[cap.userData.id].closed;
+                cap.position.lerp(t.p, 0.08);
+                cap.rotation.x += (t.r.x - cap.rotation.x) * 0.08;
+                cap.rotation.y += (t.r.y - cap.rotation.y) * 0.08;
+                cap.rotation.z += (t.r.z - cap.rotation.z) * 0.08;
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        /* ---------------- 9. 自适应 ---------------- */
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "campaign_id": "hy4-20261113",
+  "item_id": "coding-c01",
+  "model_alias": "hy4",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "3f562ea59a5eb36802da624bd8c773c6ae57dc90f8fdc8d64524f83a0331cdeb",
+  "source_answer_sha256": "472cf560c9c977eee43d320594a840e123bc74914a5e3784aa710f1ccebf27e5",
+  "source_run_id": "20261113T080016431261Z-02caf009",
+  "source_request_id": "96eceada2c1a486287e80f9f724631af",
+  "external_urls": [
+    "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "https://unpkg.com/three@0.160.0/examples/jsm/"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

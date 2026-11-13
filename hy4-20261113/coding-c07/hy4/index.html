@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D 数据可视化地球仪 · Three.js</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; overflow: hidden; background: #000;
+      background: radial-gradient(circle at 50% 50%, #071022 0%, #000 100%);
+      font-family: 'Segoe UI', 'PingFang SC', Consolas, monospace;
+      color: #e0f7fa; user-select: none;
+    }
+    #container { width: 100vw; height: 100vh; cursor: grab; }
+    #container:active { cursor: grabbing; }
+
+    /* 毛玻璃通用样式 */
+    .glass {
+      background: rgba(8, 18, 36, 0.65);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 255, 255, 0.25);
+      box-shadow: 0 4px 30px rgba(0, 255, 255, 0.08), inset 0 0 20px rgba(0,255,255,0.03);
+      border-radius: 10px;
+    }
+
+    /* 控制面板 */
+    #panel { position: absolute; top: 24px; right: 24px; width: 270px; padding: 20px; z-index: 10; }
+    #panel h1 { margin: 0 0 16px; font-size: 15px; letter-spacing: 2px; color: #00ffff; font-weight: 600; text-transform: uppercase; }
+    .ctrl-group { margin-bottom: 18px; }
+    .ctrl-group label { display: block; font-size: 11px; opacity: 0.7; margin-bottom: 8px; letter-spacing: 1px; }
+    select, input[type=range] { width: 100%; cursor: pointer; }
+    select {
+      background: rgba(0,255,255,0.08); color: #00ffff; border: 1px solid rgba(0,255,255,0.4);
+      padding: 8px; border-radius: 5px; outline: none; font-family: inherit; font-size: 13px;
+    }
+    select option { background: #0a1428; color: #fff; }
+    input[type=range] { accent-color: #00ffff; height: 4px; }
+    .time-row { display: flex; align-items: center; gap: 12px; }
+    .time-row input { flex: 1; }
+    #playBtn {
+      width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%;
+      background: rgba(0,255,255,0.12); border: 1px solid #00ffff; color: #00ffff;
+      font-size: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;
+    }
+    #playBtn:hover { background: rgba(0,255,255,0.3); box-shadow: 0 0 12px #00ffff; }
+    #yearLabel { font-size: 14px; color: #00ffff; font-weight: bold; min-width: 42px; text-align: right; }
+
+    /* 悬停提示 */
+    #tooltip {
+      position: absolute; display: none; pointer-events: none; z-index: 20;
+      padding: 10px 14px; font-size: 12px; line-height: 1.7; white-space: nowrap;
+      transform: translate(0, 0);
+    }
+    #tooltip b { color: #00ffff; }
+
+    /* 城市弹窗 */
+    #modal {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+      display: none; flex-direction: column; z-index: 30; min-width: 300px; padding: 24px;
+      opacity: 0; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    #modal.show { display: flex; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    #modal h2 { margin: 0 0 4px; font-size: 22px; color: #fff; letter-spacing: 1px; }
+    #modal .sub { font-size: 11px; opacity: 0.5; margin-bottom: 18px; letter-spacing: 1px; }
+    #modal hr { border: 0; border-top: 1px solid rgba(0,255,255,0.15); margin: 14px 0; }
+    .row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; }
+    .row span { opacity: 0.65; }
+    .row b { font-weight: 500; font-variant-numeric: tabular-nums; }
+    #closeBtn {
+      position: absolute; top: 14px; right: 16px; background: none; border: none;
+      color: rgba(255,255,255,0.5); font-size: 20px; cursor: pointer; line-height: 1;
+    }
+    #closeBtn:hover { color: #00ffff; }
+
+    /* 加载层 */
+    #loading {
+      position: absolute; inset: 0; background: #000; z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      color: #00ffff; letter-spacing: 4px; font-size: 13px; transition: opacity 0.6s;
+    }
+    .hint { position: absolute; bottom: 20px; left: 24px; font-size: 11px; opacity: 0.35; letter-spacing: 1px; pointer-events: none; }
+  </style>
+
+  <!-- ESM Import Map -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div id="loading">INITIALIZING GLOBE DATA...</div>
+  <div id="container"></div>
+  <div class="hint">拖拽旋转 · 滚轮缩放 · 点击城市 · 悬停航线</div>
+
+  <!-- 控制面板 -->
+  <div id="panel" class="glass">
+    <h1>🌐 Global Insights</h1>
+    <div class="ctrl-group">
+      <label>数据指标 / METRIC</label>
+      <select id="metricSel">
+        <option value="gdp">💰 GDP 总量</option>
+        <option value="pop">👥 人口密度</option>
+        <option value="flights">✈️ 航班吞吐量</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>时间轴 / TIMELINE (2019 - 2023)</label>
+      <div class="time-row">
+        <button id="playBtn">▶</button>
+        <input type="range" id="timeline" min="0" max="4" step="0.01" value="0">
+        <span id="yearLabel">2019</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 悬停 Tooltip -->
+  <div id="tooltip" class="glass"></div>
+
+  <!-- 城市详情弹窗 -->
+  <div id="modal" class="glass">
+    <button id="closeBtn">×</button>
+    <h2 id="mTitle">--</h2>
+    <div class="sub" id="mSub">--</div>
+    <div id="mBody"></div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    /* =========================================================
+       1. 模拟数据层 (内置趋势数据，支持 0~4 时间平滑插值)
+       ========================================================= */
+    const rawCities = [
+      { name: '北京',   lon: 116.40, lat: 39.90 },
+      { name: '纽约',   lon: -74.00, lat: 40.71 },
+      { name: '伦敦',   lon: -0.12,  lat: 51.50 },
+      { name: '东京',   lon: 139.69, lat: 35.68 },
+      { name: '巴黎',   lon: 2.35,   lat: 48.85 },
+      { name: '悉尼',   lon: 151.20, lat: -33.86 },
+      { name: '迪拜',   lon: 55.27,  lat: 25.20 },
+      { name: '新加坡', lon: 103.81, lat: 1.35 },
+      { name: '圣保罗', lon: -46.63, lat: -23.55 },
+      { name: '洛杉矶', lon: -118.24,lat: 34.05 }
+    ];
+    const METRICS = ['gdp', 'pop', 'flights'];
+    const METRIC_NAMES = { gdp: 'GDP', pop: '人口', flights: '航班量' };
+    const METRIC_COLORS = { gdp: [255, 180, 60], pop: [40, 220, 255], flights: [255, 80, 180] };
+
+    // 生成确定性波动数据 (归一化 0~1)
+    rawCities.forEach((c, idx) => {
+      c.data = {};
+      METRICS.forEach((m, mi) => {
+        c.data[m] = [];
+        let v = 0.25 + ((idx * 7 + mi * 11) % 6) * 0.1;
+        for (let t = 0; t < 5; t++) {
+          v += Math.sin(t * 1.4 + idx) * 0.06 + 0.05;
+          c.data[m].push(Math.max(0.08, Math.min(1, v)));
+        }
+      });
+    });
+
+    const routeDefs = [[0,1],[0,2],[0,3],[0,7],[1,2],[1,9],[2,4],[2,6],[3,9],[3,7],[4,6],[7,5],[8,1]];
+
+    // 插值 & 格式化
+    const getVal = (city, metric, t) => {
+      const arr = city.data[metric], i = Math.floor(t), f = t - i;
+      return arr[i] + (arr[Math.min(i + 1, 4)] - arr[i]) * f;
+    };
+    const fmt = (m, v) => m === 'gdp' ? (v*5).toFixed(2)+' 万亿' 
+                       : m === 'pop' ? (v*30).toFixed(1)+' 百万' 
+                       : Math.floor(v*2500)+' 架次/日';
+
+    /* =========================================================
+       2. 基础场景 / 相机 / 渲染器
+       ========================================================= */
+    const container = document.getElementById('container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 1, 2000);
+    camera.position.set(0, 80, 320);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 140;
+    controls.maxDistance = 600;
+    controls.enablePan = false;
+
+    const R = 100;
+    const globeGroup = new THREE.Group(); // 所有球体元素挂这里，统一自转
+    scene.add(globeGroup);
+
+    /* =========================================================
+       3. 工具函数
+       ========================================================= */
+    // 经纬度 -> 3D 坐标 (严格对齐 Three.js SphereGeometry UV)
+    function lonLatToVec3(lon, lat, r) {
+      const phi = (90 - lat) * Math.PI / 180;
+      const theta = (lon + 180) * Math.PI / 180;
+      return new THREE.Vector3(
+        -r * Math.sin(phi) * Math.cos(theta),
+         r * Math.cos(phi),
+         r * Math.sin(phi) * Math.sin(theta)
+      );
+    }
+    // 零依赖生成径向光晕贴图 (复用于城市点/流动粒子)
+    function makeGlowTex() {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+      const cx = cv.getContext('2d');
+      const g = cx.createRadialGradient(64,64,0, 64,64,64);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.25, 'rgba(255,255,255,0.75)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      cx.fillStyle = g; cx.fillRect(0,0,128,128);
+      return new THREE.CanvasTexture(cv);
+    }
+    const glowTex = makeGlowTex();
+
+    /* =========================================================
+       4. 地球本体 (自定义日夜分界线 + 夜间灯光 Shader)
+       ========================================================= */
+    const sunDir = new THREE.Vector3(1, 0.35, 0.8).normalize(); // 世界空间固定光源
+    const earthMat = new THREE.ShaderMaterial({
+      uniforms: {
+        dayMap:   { value: null },
+        nightMap: { value: null },
+        sunDir:   { value: sunDir }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vWorldNormal;
+        void main() {
+          vUv = uv;
+          // 输出【世界空间】法线，保证地球自转时分界线不跟着转
+          vWorldNormal = normalize(mat3(modelMatrix) * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D dayMap;
+        uniform sampler2D nightMap;
+        uniform vec3 sunDir;
+        varying vec2 vUv;
+        varying vec3 vWorldNormal;
+        void main() {
+          float lit = dot(normalize(vWorldNormal), normalize(sunDir));
+          float twilight = smoothstep(-0.18, 0.18, lit); // 晨昏蒙影平滑带
+
+          vec4 day = texture2D(dayMap, vUv);
+          vec4 night = texture2D(nightMap, vUv);
+
+          day.rgb *= clamp(lit * 0.85 + 0.32, 0.18, 1.05); // 白天明暗立体感
+          night.rgb *= 1.35;                                // 提亮城市夜灯
+
+          gl_FragColor = mix(night, day, twilight);
+        }
+      `
+    });
+    const earth = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 96), earthMat);
+    globeGroup.add(earth);
+
+    // 贴图加载 (Three.js 官方 CDN 资源，稳定免跨域)
+    const manager = new THREE.LoadingManager();
+    manager.onLoad = () => {
+      const ld = document.getElementById('loading');
+      ld.style.opacity = 0; setTimeout(() => ld.remove(), 600);
+      updateData(); // 纹理就绪后初始化热力与柱图
+    };
+    const texLoader = new THREE.TextureLoader(manager);
+    texLoader.load('https://unpkg.com/three@0.160.0/examples/textures/planets/earth_atmos_2048.jpg', t => earthMat.uniforms.dayMap.value = t);
+    texLoader.load('https://unpkg.com/three@0.160.0/examples/textures/planets/earth_lights_2048.png', t => earthMat.uniforms.nightMap.value = t);
+
+    /* =========================================================
+       5. 大气光晕 (BackSide Fresnel)
+       ========================================================= */
+    const atmo = new THREE.Mesh(
+      new THREE.SphereGeometry(R * 1.16, 64, 64),
+      new THREE.ShaderMaterial({
+        uniforms: { glowColor: { value: new THREE.Color(0x2a9dff) } },
+        vertexShader: `
+          varying vec3 vNormal;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 glowColor;
+          varying vec3 vNormal;
+          void main() {
+            float rim = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
+            float i = pow(clamp(rim, 0.0, 1.0), 3.2) * 1.3;
+            gl_FragColor = vec4(glowColor * i, i);
+          }
+        `,
+        side: THREE.BackSide, blending: THREE.AdditiveBlending,
+        transparent: true, depthWrite: false
+      })
+    );
+    atmo.renderOrder = 4;
+    globeGroup.add(atmo);
+
+    /* =========================================================
+       6. 国家/地区热力着色层 (离屏 Canvas 动态贴图)
+       ========================================================= */
+    const heatCv = document.createElement('canvas');
+    heatCv.width = 2048; heatCv.height = 1024;
+    const heatCtx = heatCv.getContext('2d');
+    const heatTex = new THREE.CanvasTexture(heatCv);
+    const heatLayer = new THREE.Mesh(
+      new THREE.SphereGeometry(R + 0.35, 96, 96),
+      new THREE.MeshBasicMaterial({ map: heatTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9 })
+    );
+    heatLayer.renderOrder = 1;
+    globeGroup.add(heatLayer);
+
+    /* =========================================================
+       7. 城市标记 (光晕 + 数据光柱 + 顶点)
+       ========================================================= */
+    const cityGroup = new THREE.Group();
+    cityGroup.renderOrder = 3;
+    globeGroup.add(cityGroup);
+    const interactiveCities = [];
+
+    rawCities.forEach((c, i) => {
+      const pos = lonLatToVec3(c.lon, c.lat, R);
+      const g = new THREE.Group();
+      g.position.copy(pos);
+      g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), pos.clone().normalize()); // 局部Y轴 = 地表法线
+
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false }));
+      sprite.raycast = () => {}; // 不参与拾取，避免遮挡
+      g.add(sprite);
+
+      const cylGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 8);
+      cylGeo.translate(0, 0.5, 0); // 原点移到底部，scale.y 即向上生长
+      const cyl = new THREE.Mesh(cylGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.75 }));
+      cyl.userData = { type: 'city', idx: i };
+      g.add(cyl); interactiveCities.push(cyl);
+
+      const top = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      top.userData = { type: 'city', idx: i };
+      g.add(top); interactiveCities.push(top);
+
+      cityGroup.add(g);
+      c.obj = { g, sprite, cyl, top, pos };
+    });
+
+    /* =========================================================
+       8. 航线弧线 + 流动粒子
+       ========================================================= */
+    const routeGroup = new THREE.Group();
+    routeGroup.renderOrder = 2;
+    globeGroup.add(routeGroup);
+    const interactiveRoutes = [];
+    const routes = [];
+
+    routeDefs.forEach(([i, j]) => {
+      const start = rawCities[i].obj.pos.clone();
+      const end   = rawCities[j].obj.pos.clone();
+      const dist  = start.distanceTo(end);
+      const mid   = start.clone().add(end).multiplyScalar(0.5).normalize().multiplyScalar(R + dist * 0.45);
+      const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+
+      // 半透明光带同时充当 Raycaster 碰撞体
+      const tube = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 64, 0.5, 6, false),
+        new THREE.MeshBasicMaterial({ color: 0x00bbff, transparent: true, opacity: 0.15, depthWrite: false })
+      );
+      tube.userData = { type: 'route', from: rawCities[i].name, to: rawCities[j].name, i, j, info: '' };
+      routeGroup.add(tube);
+      interactiveRoutes.push(tube);
+
+      const particles = [0, 1].map(() => {
+        const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false }));
+        p.scale.set(3.2, 3.2, 1);
+        p.raycast = () => {};
+        routeGroup.add(p);
+        return p;
+      });
+      routes.push({ curve, tube, particles, i, j });
+    });
+
+    /* =========================================================
+       9. UI 绑定 & 数据驱动更新
+       ========================================================= */
+    const metricSel = document.getElementById('metricSel');
+    const timeline  = document.getElementById('timeline');
+    const yearLabel = document.getElementById('yearLabel');
+    const playBtn   = document.getElementById('playBtn');
+    const tooltip   = document.getElementById('tooltip');
+    const modal     = document.getElementById('modal');
+    let isPlaying = false, activeCityIdx = null;
+
+    function updateData() {
+      const t = parseFloat(timeline.value);
+      const m = metricSel.value;
+      const [cr, cg, cb] = METRIC_COLORS[m];
+      yearLabel.innerText = 2019 + Math.floor(t);
+
+      // ① 重绘热力贴图 (Canvas 顶部=北极, X 对应经度，与 UV 完美对齐)
+      heatCtx.clearRect(0, 0, 2048, 1024);
+      heatCtx.globalCompositeOperation = 'lighter';
+      rawCities.forEach(c => {
+        const v = getVal(c, m, t);
+        const x = (c.lon + 180) / 360 * 2048;
+        const y = (90 - c.lat) / 180 * 1024;
+        const rad = 70 + v * 190;
+        const grad = heatCtx.createRadialGradient(x, y, 0, x, y, rad);
+        grad.addColorStop(0, `rgba(${cr},${cg},${cb},${0.45 + v * 0.45})`);
+        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+        heatCtx.fillStyle = grad;
+        heatCtx.beginPath(); heatCtx.arc(x, y, rad, 0, Math.PI * 2); heatCtx.fill();
+      });
+      heatTex.needsUpdate = true;
+
+      // ② 更新城市光柱高度 / 颜色
+      const col = new THREE.Color(`rgb(${cr},${cg},${cb})`);
+      rawCities.forEach(c => {
+        const v = getVal(c, m, t), h = 4 + v * 30;
+        c.obj.cyl.scale.y = h;
+        c.obj.top.position.y = h;
+        c.obj.cyl.material.color.copy(col);
+        c.obj.sprite.material.color.copy(col);
+        c.obj.sprite.scale.set(6 + v * 7, 6 + v * 7, 1);
+      });
+
+      if (activeCityIdx !== null && modal.classList.contains('show')) renderModal(activeCityIdx);
+    }
+
+    metricSel.addEventListener('change', updateData);
+    timeline.addEventListener('input', updateData);
+    playBtn.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      playBtn.innerText = isPlaying ? '⏸' : '▶';
+    });
+
+    function renderModal(idx) {
+      const c = rawCities[idx], t = parseFloat(timeline.value), m = metricSel.value;
+      document.getElementById('mTitle').innerText = c.name;
+      document.getElementById('mSub').innerText = `COORD ${c.lat.toFixed(2)}°N / ${c.lon.toFixed(2)}°E · ${yearLabel.innerText}`;
+      document.getElementById('mBody').innerHTML = `
+        <div class="row"><span>当前指标 (${METRIC_NAMES[m]})</span><b style="color:#00ffff">${fmt(m, getVal(c,m,t))}</b></div>
+        <hr>
+        <div class="row"><span>💰 GDP 总量</span><b>${fmt('gdp', getVal(c,'gdp',t))}</b></div>
+        <div class="row"><span>👥 常住人口</span><b>${fmt('pop', getVal(c,'pop',t))}</b></div>
+        <div class="row"><span>✈️ 航班吞吐</span><b>${fmt('flights', getVal(c,'flights',t))}</b></div>
+      `;
+    }
+    document.getElementById('closeBtn').addEventListener('click', () => {
+      modal.classList.remove('show'); activeCityIdx = null;
+    });
+
+    /* =========================================================
+       10. Raycaster 交互 (悬停航线 / 点击城市)
+       ========================================================= */
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let mx = 0, my = 0;
+
+    addEventListener('mousemove', e => {
+      mouse.x = (e.clientX / innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+      mx = e.clientX; my = e.clientY;
+
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects([...interactiveRoutes, ...interactiveCities], false);
+      if (hits.length) {
+        const u = hits[0].object.userData;
+        container.style.cursor = 'pointer';
+        if (u.type === 'route') {
+          tooltip.innerHTML = `✈ <b>${u.from} → ${u.to}</b><br>${u.info}`;
+          tooltip.style.left = (mx + 16) + 'px';
+          tooltip.style.top  = (my + 16) + 'px';
+          tooltip.style.display = 'block';
+        } else {
+          tooltip.style.display = 'none';
+        }
+      } else {
+        tooltip.style.display = 'none';
+        container.style.cursor = 'grab';
+      }
+    });
+
+    addEventListener('click', () => {
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(interactiveCities, false);
+      if (hits.length) {
+        activeCityIdx = hits[0].object.userData.idx;
+        renderModal(activeCityIdx);
+        modal.classList.add('show');
+      }
+    });
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    /* =========================================================
+       11. 主渲染循环 (自转 / 时间播放 / 粒子流动)
+       ========================================================= */
+    let last = performance.now(), simTime = 0;
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now; simTime += dt;
+
+      // 🌍 地球自转 (太阳光世界坐标固定 -> 日夜线自然扫过地表)
+      globeGroup.rotation.y += 0.075 * dt;
+
+      // ⏩ 时间轴自动播放
+      if (isPlaying) {
+        let t = parseFloat(timeline.value) + dt * 0.45;
+        if (t >= 4) t = 0;
+        timeline.value = t;
+        updateData();
+      }
+
+      const t = parseFloat(timeline.value);
+
+      // ✈️ 航线流动 & 实时流量刷新
+      routes.forEach(r => {
+        const flow = (getVal(rawCities[r.i], 'flights', t) + getVal(rawCities[r.j], 'flights', t)) * 0.5;
+        const speed = 0.09 + flow * 0.28; // 航班量越大，流动越快
+        r.particles.forEach((p, k) => {
+          p.position.copy(r.curve.getPointAt((simTime * speed + k * 0.5) % 1));
+        });
+        r.tube.material.opacity = 0.08 + flow * 0.22;
+        r.tube.userData.info = `实时流量: <b>${Math.floor(flow * 1200)}</b> 班/日`;
+      });
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

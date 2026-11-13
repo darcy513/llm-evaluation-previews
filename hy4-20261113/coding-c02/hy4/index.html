@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>简洁电梯模拟器</title>
+<style>
+  :root {
+    --floor-h: 60px;
+    --bg: #e2e8f0;
+    --panel-bg: #ffffff;
+    --line: #cbd5e1;
+    --text: #334155;
+    --muted: #64748b;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+  }
+  .app {
+    display: flex;
+    gap: 28px;
+    background: var(--panel-bg);
+    padding: 28px;
+    border-radius: 18px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  }
+
+  /* ---------- 控制面板 ---------- */
+  .panel { width: 210px; display: flex; flex-direction: column; gap: 16px; }
+  .panel h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+  .panel .desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin: -8px 0 8px; }
+  .control-group { display: flex; flex-direction: column; gap: 6px; }
+  .control-group label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  select, input {
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    background: #f8fafc;
+    transition: border-color .2s;
+  }
+  select:focus, input:focus { border-color: var(--primary); }
+  button {
+    margin-top: 4px;
+    padding: 11px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+  }
+  button:hover { background: var(--primary-hover); }
+  button:active { transform: scale(.97); }
+  .stats {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px dashed var(--line);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: var(--muted);
+  }
+  .stats b { color: var(--text); float: right; }
+
+  /* ---------- 建筑 ---------- */
+  .building {
+    position: relative;
+    width: 560px;
+    height: calc(var(--floor-h) * 10);
+    display: flex;
+    background: #f8fafc;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    /* 不裁剪，让 Tooltip 自由溢出；电梯边界由 JS 逻辑严格保证 */
+  }
+  .shafts {
+    display: flex;
+    width: 156px;
+    background: #eef2f6;
+    border-right: 2px solid var(--line);
+    border-radius: 8px 0 0 8px;
+    z-index: 2;
+  }
+  .shaft {
+    flex: 1;
+    position: relative;
+    border-right: 1px dashed var(--line);
+  }
+  .shaft:last-child { border-right: none; }
+
+  .elevator {
+    position: absolute;
+    bottom: 5px; left: 5px; right: 5px;
+    height: 50px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-radius: 5px;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, .3);
+    will-change: transform;
+    z-index: 3;
+  }
+  .elevator::after { /* 门缝 */
+    content: ''; position: absolute;
+    left: 50%; top: 4px; bottom: 4px;
+    width: 2px; background: rgba(255,255,255,.25);
+  }
+  .elev-display {
+    position: absolute;
+    top: 3px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; color: #fff;
+    background: rgba(0,0,0,.25);
+    padding: 1px 5px; border-radius: 3px;
+    z-index: 4; pointer-events: none;
+  }
+  .cabin { position: relative; width: 100%; height: 100%; }
+
+  .floors { position: relative; flex: 1; }
+  .floor {
+    position: absolute; left: 0; right: 0;
+    height: var(--floor-h);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center;
+  }
+  .floor:last-child { border-bottom: none; }
+  .floor-label {
+    width: 42px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--muted);
+    background: #f1f5f9;
+    border-right: 1px solid var(--line);
+  }
+  .waiting-area { position: relative; flex: 1; height: 100%; }
+
+  /* ---------- 人物 & Tooltip ---------- */
+  .person {
+    position: absolute;
+    bottom: 8px; left: 10px;
+    width: 20px; height: 28px;
+    background: var(--p-color);
+    border-radius: 9px 9px 4px 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,.15);
+    cursor: pointer;
+    transition: transform .4s cubic-bezier(.4,0,.2,1), opacity .4s ease, filter .2s;
+    z-index: 5;
+  }
+  .person::before { /* 小脑袋 */
+    content: ''; position: absolute;
+    top: -11px; left: 3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--p-color);
+    border: 2px solid #fff;
+  }
+  .person:hover { filter: brightness(1.12); z-index: 20; }
+  .tooltip {
+    position: absolute;
+    bottom: 125%; left: 50%;
+    transform: translateX(-50%) scale(.85);
+    transform-origin: bottom center;
+    background: #1e293b; color: #fff;
+    padding: 5px 9px; border-radius: 5px;
+    font-size: 12px; white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: all .2s ease;
+  }
+  .tooltip::after {
+    content: ''; position: absolute;
+    top: 100%; left: 50%; transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: #1e293b;
+  }
+  .person:hover .tooltip { transform: translateX(-50%) scale(1); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- 控制面板 -->
+  <div class="panel">
+    <h2>🛗 电梯模拟器</h2>
+    <p class="desc">3 部电梯 · 每部限载 1 人<br>多余乘客原地排队，等下一部</p>
+
+    <div class="control-group">
+      <label>生成楼层</label>
+      <select id="floor-select"></select>
+    </div>
+    <div class="control-group">
+      <label>生成人数</label>
+      <input type="number" id="count-input" value="4" min="1" max="12">
+    </div>
+    <button id="spawn-btn">生成乘客</button>
+
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <!-- 建筑主体 -->
+  <div class="building">
+    <div class="shafts" id="shafts"></div>
+    <div class="floors" id="floors"></div>
+  </div>
+</div>
+
+<script>
+/* ================= 配置 ================= */
+const FLOOR_COUNT = 10;
+const FLOOR_H     = 60;          // 与 CSS --floor-h 保持一致
+const ELEV_COUNT  = 3;
+const SPEED       = 120;         // px / 秒
+const COLORS      = ['#f87171','#fb923c','#fbbf24','#a3e635','#34d399','#38bdf8','#818cf8','#c084fc','#f472b6'];
+
+let persons   = [];
+let elevators = [];
+let nextId    = 1;
+let lastTime  = 0;
+
+/* ================= DOM 初始化 ================= */
+const floorsEl = document.getElementById('floors');
+const shaftsEl = document.getElementById('shafts');
+const selectEl = document.getElementById('floor-select');
+
+for (let f = 1; f <= FLOOR_COUNT; f++) {
+  const opt = document.createElement('option');
+  opt.value = f; opt.textContent = `${f} 层`;
+  selectEl.appendChild(opt);
+
+  const div = document.createElement('div');
+  div.className = 'floor';
+  div.style.bottom = `${(f - 1) * FLOOR_H}px`;
+  div.innerHTML = `<div class="floor-label">${f}F</div>
+                   <div class="waiting-area" id="wait-${f}"></div>`;
+  floorsEl.appendChild(div);
+}
+selectEl.value = 5;
+
+for (let i = 0; i < ELEV_COUNT; i++) {
+  const s = document.createElement('div');
+  s.className = 'shaft'; s.id = `shaft-${i}`;
+  shaftsEl.appendChild(s);
+}
+
+/* ================= 实体类 ================= */
+class Person {
+  constructor(floor, target) {
+    this.id = nextId++;
+    this.currentFloor = floor;
+    this.targetFloor  = target;
+    this.status = 'waiting';           // waiting | riding | arrived
+    this.el = document.createElement('div');
+    this.el.className = 'person';
+    this.el.style.setProperty('--p-color', COLORS[Math.floor(Math.random() * COLORS.length)]);
+    this.el.innerHTML = `<div class="tooltip">目标: ${target} 层</div>`;
+    document.getElementById(`wait-${floor}`).appendChild(this.el);
+  }
+  setQueueX(i) {
+    this.el.style.transform = `translateX(${i * 26}px)`;
+  }
+  ride(elev) {
+    this.status = 'riding';
+    this.el.style.transform = `translateX(0)`;   // 在 40px 宽轿厢内居中(left:10px)
+    elev.cabin.appendChild(this.el);
+  }
+  arrive() {
+    this.status = 'arrived';
+    // 走回走廊再淡出，不跟随电梯继续跑
+    document.getElementById(`wait-${this.targetFloor}`).appendChild(this.el);
+    this.el.style.transform = `translateX(90px) translateY(-12px) scale(.6)`;
+    this.el.style.opacity = '0';
+    this.el.style.pointerEvents = 'none';
+    setTimeout(() => this.el.remove(), 450);
+  }
+}
+
+class Elevator {
+  constructor(id) {
+    this.id = id;
+    this.y = 0;                       // 0 = 1F, 60 = 2F ...
+    this.targetFloor = 1;
+    this.status = 'idle';             // idle | moving_pickup | moving_dropoff
+    this.passenger = null;
+
+    this.el = document.createElement('div');
+    this.el.className = 'elevator';
+    this.el.innerHTML = `<div class="elev-display">1</div><div class="cabin"></div>`;
+    document.getElementById(`shaft-${id}`).appendChild(this.el);
+    this.cabin = this.el.querySelector('.cabin');
+    this.display = this.el.querySelector('.elev-display');
+    this.render();
+  }
+  get floorFloat() { return this.y / FLOOR_H + 1; }
+  render() {
+    this.el.style.transform = `translateY(-${this.y}px)`;
+    this.display.textContent = Math.round(this.floorFloat);
+  }
+  assign(floor) {
+    this.status = 'moving_pickup';
+    this.targetFloor = floor;
+  }
+}
+
+for (let i = 0; i < ELEV_COUNT; i++) elevators.push(new Elevator(i));
+
+/* ================= 调度器 =================
+   核心：统计每层「还缺几部电梯」= 等待人数 - 已在路上的电梯数
+   这样同层 4 人会依次派 3 部 + 回收后再派 1 部，完美符合「依次上梯」 */
+function dispatch() {
+  const idle = elevators.filter(e => e.status === 'idle');
+  if (!idle.length) return;
+
+  const need = {};
+  for (let f = 1; f <= FLOOR_COUNT; f++) {
+    const waiting  = persons.filter(p => p.status === 'waiting' && p.currentFloor === f).length;
+    const incoming = elevators.filter(e => e.status === 'moving_pickup' && e.targetFloor === f).length;
+    need[f] = waiting - incoming;
+  }
+
+  idle.forEach(elev => {
+    let best = null, minDist = Infinity;
+    for (let f = 1; f <= FLOOR_COUNT; f++) {
+      if (need[f] > 0) {
+        const d = Math.abs(f - elev.floorFloat);
+        if (d < minDist) { minDist = d; best = f; }
+      }
+    }
+    if (best !== null) {
+      elev.assign(best);
+      need[best]--;               // 占掉一个名额，避免重复派往同一人
+    }
+  });
+}
+
+function rearrange(floor) {
+  persons.filter(p => p.status === 'waiting' && p.currentFloor === floor)
+         .forEach((p, i) => p.setQueueX(i));
+}
+
+function updateStats() {
+  const c = s => persons.filter(p => p.status === s).length;
+  document.getElementById('stats').innerHTML =
+    `<div>🕒 等待中 <b>${c('waiting')}</b></div>
+     <div>🛗 乘坐中 <b>${c('riding')}</b></div>
+     <div>✅ 已送达 <b>${c('arrived')}</b></div>`;
+}
+
+/* ================= 生成 ================= */
+document.getElementById('spawn-btn').addEventListener('click', () => {
+  const floor = parseInt(selectEl.value);
+  const count = Math.max(1, Math.min(12, parseInt(document.getElementById('count-input').value) || 1));
+
+  for (let i = 0; i < count; i++) {
+    let target;
+    do { target = Math.floor(Math.random() * FLOOR_COUNT) + 1; }
+    while (target === floor);                 // 目标楼层 ≠ 当前楼层
+    persons.push(new Person(floor, target));
+  }
+  rearrange(floor);
+  dispatch();
+  updateStats();
+});
+
+/* ================= 主循环 (RAF 逐帧，丝滑) ================= */
+function tick(time) {
+  if (!lastTime) lastTime = time;
+  let dt = (time - lastTime) / 1000;
+  lastTime = time;
+  if (dt > 0.1) dt = 0.1;                     // 切后台防跳变
+
+  let changed = false;
+
+  elevators.forEach(e => {
+    if (e.status === 'idle') return;
+
+    const targetY = (e.targetFloor - 1) * FLOOR_H;
+    const dir  = Math.sign(targetY - e.y);
+    const step = dir * SPEED * dt;
+
+    if (Math.abs(targetY - e.y) <= Math.abs(step)) {
+      e.y = targetY;
+      e.render();
+      const arrivedFloor = e.targetFloor;
+
+      if (e.status === 'moving_pickup') {
+        // 只接「队列最前」的 1 人，其余原地不动
+        const p = persons.find(p => p.status === 'waiting' && p.currentFloor === arrivedFloor);
+        if (p) {
+          p.ride(e);
+          e.passenger = p;
+          e.status = 'moving_dropoff';
+          e.targetFloor = p.targetFloor;
+          rearrange(arrivedFloor);            // 剩下的人左移补位
+        } else {
+          e.status = 'idle';                  // 被别的电梯先接走了
+        }
+      } else { // moving_dropoff
+        if (e.passenger) e.passenger.arrive();
+        e.passenger = null;
+        e.status = 'idle';
+      }
+      changed = true;
+    } else {
+      e.y += step;
+      e.render();
+    }
+  });
+
+  if (changed) { dispatch(); updateStats(); }
+  requestAnimationFrame(tick);
+}
+
+updateStats();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

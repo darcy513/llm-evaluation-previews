@@ -1,0 +1,16 @@
+{
+  "campaign_id": "hy4-20261113",
+  "item_id": "coding-c03",
+  "model_alias": "hy4",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "8e6359b99975c3138470ab70c5629897a7731a13398917669337665c1ba7dae6",
+  "source_answer_sha256": "848c44cafb8faa47e0a80dd2664539772c92124eef0d8f95869d5c63a12f42a0",
+  "source_run_id": "20261113T080016432770Z-08e8826b",
+  "source_request_id": "6dc6676f17864c00a7356f7e7e060653",
+  "external_urls": [
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}

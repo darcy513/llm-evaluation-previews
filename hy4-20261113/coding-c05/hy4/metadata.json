@@ -1,0 +1,17 @@
+{
+  "campaign_id": "hy4-20261113",
+  "item_id": "coding-c05",
+  "model_alias": "hy4",
+  "artifact_type": "html",
+  "artifact_file": "index.html",
+  "artifact_sha256": "7398f766632ab7fda4f0acab2a5615dd34e56aba09a19477d52ded9b3067f5cb",
+  "source_answer_sha256": "018a22cc6dea4e4614a1e2e04b75a065ff6d533b8f9714da8e8c092c05e298e0",
+  "source_run_id": "20261113T080307980564Z-1f51b403",
+  "source_request_id": "e2f09c265e2e4769bb1a27e5f34b97be",
+  "external_urls": [
+    "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair",
+  "runtime_note": "Model code: inside animate(), local `const uS/uM` shadow the UTC hand meshes of the same name, so `uM.rotation.y = ...` throws `Cannot set properties of undefined (setting 'y')` every frame before renderer.render; the dial does not update. Not repaired."
+}

@@ -1,0 +1,15 @@
+{
+  "campaign_id": "hy4-20261113",
+  "item_id": "coding-c04",
+  "model_alias": "hy4",
+  "artifact_type": "svg",
+  "artifact_file": "answer.svg",
+  "artifact_sha256": "b7d380d758ed9841268559990a3249d0d8eea3493419f9238da59f7ffe0c7d63",
+  "source_answer_sha256": "970aab8ccd63c81205b585fee21c3694a5d45f56e1c855a8a4fcbcf864ee13b5",
+  "source_run_id": "20261113T080016431265Z-cb14505c",
+  "source_request_id": "150f09952c0448b9bba69649433c1200",
+  "external_urls": [
+    "http://www.w3.org/2000/svg"
+  ],
+  "extraction_policy": "mechanical-only-no-code-repair"
+}
